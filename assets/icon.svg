@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Orionis Capture icon">
+  <defs>
+    <linearGradient id="document" x1="28" x2="96" y1="16" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e8f1ff"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="42" x2="93" y1="35" y2="93" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f80ed"/>
+      <stop offset="1" stop-color="#216e4e"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="28" fill="#1f2937"/>
+  <path d="M34 18h42l22 22v70H34z" fill="url(#document)"/>
+  <path d="M76 18v22h22z" fill="#cfe0f7"/>
+  <path d="M49 54h30M49 68h30M49 82h20" stroke="#6b7280" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="82" cy="82" r="24" fill="url(#accent)"/>
+  <path d="M82 60l6 16 16 6-16 6-6 16-6-16-16-6 16-6z" fill="#ffffff"/>
+  <circle cx="82" cy="82" r="5" fill="#1f2937"/>
+</svg>
