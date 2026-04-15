@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Orionis Capture",
+  "description": "Capture LinkedIn job posts as Orionis-compatible Markdown.",
+  "version": "0.1.0",
+  "permissions": ["activeTab", "clipboardWrite", "sidePanel", "scripting"],
+  "host_permissions": ["https://www.linkedin.com/jobs/*"],
+  "action": {
+    "default_title": "Capture job for Orionis"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/jobs/*"],
+      "js": ["src/content-script.js"]
+    }
+  ],
+  "side_panel": {
+    "default_path": "src/sidepanel.html"
+  }
+}
