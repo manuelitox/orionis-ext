@@ -66,7 +66,7 @@ async function sendExtractMessage(tabId) {
   const response = await chrome.tabs.sendMessage(tabId, { type: MESSAGE_TYPE });
 
   if (!response?.ok) {
-    throw new Error("LinkedIn job data was not available on this page.");
+    throw new Error(response?.error || "LinkedIn job data was not available on this page.");
   }
 
   return response.job;
