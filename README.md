@@ -27,9 +27,12 @@ Brave is Chromium-based, so the extension should work there as long as your Brav
 1. Open a LinkedIn job post.
 2. Open the Orionis Capture side panel.
 3. Review or edit the generated Markdown.
-4. Click Copy Markdown.
-5. Paste or save the Markdown into Orionis.
+4. Click Save Role and choose your Orionis `roles/` folder.
+
+You can also click Copy Markdown and paste or save it manually.
 
 ## Scope
 
 This extension only extracts data from the page you are already viewing. It does not run Orionis analysis, scrape LinkedIn in the background, sync data, or store job posts.
+
+Save Role uses the browser folder picker when available. If direct folder writing is unavailable, it falls back to downloading a `.md` file.

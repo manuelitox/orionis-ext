@@ -55,7 +55,7 @@ p {
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -65,7 +65,7 @@ button {
   background: #ffffff;
   color: #202124;
   cursor: pointer;
-  min-height: 38px;
+  min-height: 42px;
   padding: 8px 10px;
 }
 
