@@ -1,30 +1,57 @@
 (() => {
-  const MESSAGE_TYPE = "ORIONIS_EXTRACT_LINKEDIN_JOB";
+  const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type !== MESSAGE_TYPE) {
       return false;
     }
 
-    extractLinkedInJob()
+    extractJob()
       .then((job) => sendResponse({ ok: true, job }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
 
     return true;
   });
 
-  async function extractLinkedInJob() {
-    await expandJobDescription();
+  async function extractJob() {
+    if (isLinkedInJobPage()) {
+      await expandLinkedInJobDescription();
 
-    return {
-      title: getJobTitle(),
-      company: getCompanyName(),
-      url: window.location.href,
-      description: getJobDescription()
-    };
+      return {
+        title: getLinkedInJobTitle(),
+        company: getLinkedInCompanyName(),
+        website: getLinkedInCompanyWebsite(),
+        salary: getLinkedInSalary(),
+        url: window.location.href,
+        description: getLinkedInJobDescription()
+      };
+    }
+
+    if (isWellfoundJobPage()) {
+      await expandWellfoundJobDescription();
+
+      return {
+        title: getWellfoundJobTitle(),
+        company: getWellfoundCompanyName(),
+        website: getWellfoundCompanyWebsite(),
+        salary: getWellfoundSalary(),
+        url: window.location.href,
+        description: getWellfoundJobDescription()
+      };
+    }
+
+    throw new Error("This page is not a supported job posting.");
   }
 
-  function getJobTitle() {
+  function isLinkedInJobPage() {
+    return /^https:\/\/www\.linkedin\.com\/jobs\//.test(window.location.href);
+  }
+
+  function isWellfoundJobPage() {
+    return /^https:\/\/wellfound\.com\/jobs(\/|$)/.test(window.location.href);
+  }
+
+  function getLinkedInJobTitle() {
     return (
       textFromFirst([
         ".job-details-jobs-unified-top-card__job-title",
@@ -36,7 +63,7 @@
     );
   }
 
-  function getCompanyName() {
+  function getLinkedInCompanyName() {
     return (
       textFromFirst([
         ".job-details-jobs-unified-top-card__company-name a",
@@ -49,7 +76,7 @@
     );
   }
 
-  function getJobDescription() {
+  function getLinkedInJobDescription() {
     const descriptionRoot = bestTextElement([
       "[componentkey^='JobDetails_AboutTheJob']",
       "[componentKey^='JobDetails_AboutTheJob']",
@@ -66,7 +93,22 @@
     return cleanText(descriptionRoot?.innerText || "");
   }
 
-  async function expandJobDescription() {
+  function getLinkedInCompanyWebsite() {
+    return (
+      hrefFromFirst([
+        "a[href*='/company/'][target='_blank']",
+        "a[data-tracking-control-name*='company_website']",
+        "a[href^='http']"
+      ], isExternalWebsiteHref) || ""
+    );
+  }
+
+  function getLinkedInSalary() {
+    const pageText = cleanText(document.body?.innerText || "");
+    return normalizeSalary(firstSalaryMatch(pageText));
+  }
+
+  async function expandLinkedInJobDescription() {
     const descriptionRoot = firstVisibleElement([
       "[componentkey^='JobDetails_AboutTheJob']",
       "[componentKey^='JobDetails_AboutTheJob']",
@@ -98,9 +140,136 @@
     }
   }
 
+  function getWellfoundJobTitle() {
+    return (
+      textFromFirst([
+        "main h1",
+        "article h1",
+        "[data-test] h1",
+        "h1"
+      ]) || parseWellfoundTitleFromDocument()
+    );
+  }
+
+  function getWellfoundCompanyName() {
+    return (
+      textFromFirst([
+        "main a[href^='/company/']",
+        "main a[href*='wellfound.com/company/']",
+        "article a[href^='/company/']",
+        "article a[href*='wellfound.com/company/']"
+      ]) || parseWellfoundCompanyFromDocument()
+    );
+  }
+
+  function getWellfoundCompanyWebsite() {
+    const websiteLink = Array.from(document.querySelectorAll("a[href]")).find((element) => {
+      if (!isVisible(element)) {
+        return false;
+      }
+
+      const text = cleanText(element.innerText || element.textContent || "");
+      const href = element.href || "";
+
+      return /visit our site|company website|website/i.test(text) && isExternalWebsiteHref(href);
+    });
+
+    if (websiteLink?.href) {
+      return websiteLink.href;
+    }
+
+    return (
+      hrefFromFirst([
+        "main a[href^='http']",
+        "article a[href^='http']"
+      ], isExternalWebsiteHref) || ""
+    );
+  }
+
+  function getWellfoundSalary() {
+    const directSalary = textFromFirst([
+      ".styles_subheader__DfKjh",
+      "[class^='styles_subheader__']",
+      "[class*=' styles_subheader__']"
+    ]);
+
+    if (directSalary && /[$€£₹]/.test(directSalary)) {
+      return normalizeSalary(directSalary);
+    }
+
+    const headerText = cleanText(
+      firstVisibleElement(["main", "article", "[role='main']"])?.innerText || ""
+    );
+
+    return normalizeSalary(
+      firstSalaryMatch(headerText) || firstSalaryMatch(cleanText(document.body?.innerText || ""))
+    );
+  }
+
+  function getWellfoundJobDescription() {
+    const directDescription = textFromFirst([
+      ".styles_body__k1Fvd",
+      "[class^='styles_body__']",
+      "[class*=' styles_body__']"
+    ]);
+
+    if (directDescription) {
+      return stripWellfoundBoilerplate(directDescription);
+    }
+
+    const pageText = cleanText(document.body?.innerText || "");
+    const extractedSection = extractWellfoundDescription(pageText);
+
+    if (extractedSection) {
+      return stripWellfoundBoilerplate(extractedSection);
+    }
+
+    const descriptionRoot = bestTextElement([
+      "main",
+      "article",
+      "[role='main']"
+    ]);
+
+    return stripWellfoundBoilerplate(cleanText(descriptionRoot?.innerText || ""));
+  }
+
+  async function expandWellfoundJobDescription() {
+    const aboutHeading = findHeadingElement(/about the job/i);
+    const expandButton = Array.from(
+      document.querySelectorAll("button, [role='button']")
+    ).find((element) => {
+      if (!isVisible(element)) {
+        return false;
+      }
+
+      const text = cleanText(element.innerText || element.textContent || "");
+      const label = cleanText(element.getAttribute("aria-label") || "");
+      const combined = `${text} ${label}`;
+
+      return /\b(show more|see more|read more)\b/i.test(combined);
+    });
+
+    if (expandButton && (!aboutHeading || distanceToElement(expandButton, aboutHeading) < 1200)) {
+      expandButton.click();
+      await wait(150);
+    }
+  }
+
   function textFromFirst(selectors) {
     const element = firstVisibleElement(selectors);
     return cleanText(element?.innerText || element?.textContent || "");
+  }
+
+  function hrefFromFirst(selectors, predicate = () => true) {
+    for (const selector of selectors) {
+      const elements = Array.from(document.querySelectorAll(selector));
+      const visible = elements.find((element) => isVisible(element) && predicate(element.href || ""));
+      if (visible?.href) {
+        return visible.href;
+      }
+    }
+
+    return "";
   }
 
   function firstVisibleElement(selectors) {
@@ -163,12 +332,150 @@
     return cleanText(title || "");
   }
 
+  function parseWellfoundTitleFromDocument() {
+    const title = document.title.split("•")[0]?.trim() || document.title;
+    return cleanText(title.replace(/\s+\|\s+Wellfound$/i, ""));
+  }
+
   function parseCompanyFromDocument() {
     const parts = document.title.split("|").map((part) => part.trim());
     const linkedinIndex = parts.findIndex((part) => /linkedin/i.test(part));
     const candidate = linkedinIndex > 0 ? parts[linkedinIndex - 1] : "";
 
     return cleanText(candidate);
+  }
+
+  function parseWellfoundCompanyFromDocument() {
+    const primaryTitle = document.title.split("•")[0]?.trim() || document.title;
+    const atIndex = primaryTitle.lastIndexOf(" at ");
+
+    if (atIndex > -1) {
+      return cleanText(primaryTitle.slice(atIndex + 4));
+    }
+
+    const byBullet = document.title.split("•").map((part) => cleanText(part));
+    return cleanText(byBullet[1] || "");
+  }
+
+  function findHeadingElement(pattern) {
+    return Array.from(
+      document.querySelectorAll("h1, h2, h3, h4, [role='heading']")
+    ).find((element) => isVisible(element) && pattern.test(cleanText(element.innerText)));
+  }
+
+  function collectSectionText(heading) {
+    const chunks = [];
+    let current = heading.nextElementSibling;
+
+    while (current) {
+      if (isHeading(current) && current !== heading) {
+        break;
+      }
+
+      const text = cleanText(current.innerText || current.textContent || "");
+      if (text) {
+        chunks.push(text);
+      }
+
+      current = current.nextElementSibling;
+    }
+
+    return cleanText(chunks.join("\n\n"));
+  }
+
+  function isHeading(element) {
+    return /^(H1|H2|H3|H4|H5|H6)$/.test(element.tagName) || element.getAttribute("role") === "heading";
+  }
+
+  function stripWellfoundBoilerplate(text) {
+    return cleanText(
+      text
+        .replace(/^about the job\s*/i, "")
+        .replace(/^job description\s*/i, "")
+        .replace(/\n?about the company[\s\S]*$/i, "")
+        .replace(/\n?learn more about .+$/i, "")
+        .replace(/\n?(apply now|save)\s*$/gim, "")
+    );
+  }
+
+  function extractWellfoundDescription(text) {
+    return (
+      extractTextBetween(text, /about the job/i, wellfoundDescriptionEndPatterns()) ||
+      extractTextBetween(text, /job description/i, wellfoundDescriptionEndPatterns()) ||
+      extractTextBetween(text, /the role/i, wellfoundDescriptionEndPatterns()) ||
+      ""
+    );
+  }
+
+  function extractTextBetween(text, startPattern, endPatterns) {
+    const lines = String(text || "")
+      .split("\n")
+      .map((line) => cleanText(line))
+      .filter(Boolean);
+
+    const startIndex = lines.findIndex((line) => startPattern.test(line));
+    if (startIndex === -1) {
+      return "";
+    }
+
+    let endIndex = lines.length;
+    for (let index = startIndex + 1; index < lines.length; index += 1) {
+      if (endPatterns.some((pattern) => pattern.test(lines[index]))) {
+        endIndex = index;
+        break;
+      }
+    }
+
+    return cleanText(lines.slice(startIndex + 1, endIndex).join("\n"));
+  }
+
+  function wellfoundDescriptionEndPatterns() {
+    return [
+      /about the company/i,
+      /similar jobs/i,
+      /explore other opportunities/i,
+      /find jobs, recruit talent, or learn about our company/i,
+      /^apply now$/i
+    ];
+  }
+
+  function firstSalaryMatch(text) {
+    const matches = String(text || "").match(
+      /(?:[$€£₹]\s?\d[\d.,]*\s?[kKmM]?(?:\s*[–-]\s*[$€£₹]?\s?\d[\d.,]*\s?[kKmM]?)?(?:\s*•\s*(?:no equity|[\d.,]+%\s*[–-]\s*[\d.,]+%))?)/i
+    );
+
+    return cleanText(matches?.[0] || "");
+  }
+
+  function normalizeSalary(value) {
+    const salary = cleanText(value || "");
+
+    if (!salary) {
+      return "";
+    }
+
+    const numericTokens = Array.from(
+      salary.matchAll(/\d[\d.,]*/g),
+      (match) => Number.parseFloat(match[0].replace(/,/g, ""))
+    ).filter((number) => Number.isFinite(number));
+
+    if (numericTokens.length > 0 && numericTokens.every((number) => number === 0)) {
+      return "";
+    }
+
+    return salary;
+  }
+
+  function isExternalWebsiteHref(href) {
+    return Boolean(
+      href &&
+      /^https?:\/\//.test(href) &&
+      !/linkedin\.com|wellfound\.com/.test(href)
+    );
+  }
+
+  function distanceToElement(first, second) {
+    return Math.abs(first.getBoundingClientRect().top - second.getBoundingClientRect().top);
   }
 
   function cleanText(value) {

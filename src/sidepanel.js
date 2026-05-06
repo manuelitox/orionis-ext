@@ -1,6 +1,6 @@
 import { buildOrionisMarkdown } from "./markdown-template.js";
 
-const MESSAGE_TYPE = "ORIONIS_EXTRACT_LINKEDIN_JOB";
+const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
 
 const markdownEditor = document.querySelector("#markdown");
 const statusText = document.querySelector("#status");
@@ -17,14 +17,14 @@ saveButton.addEventListener("click", saveRole);
 captureCurrentTab();
 
 async function captureCurrentTab() {
-  setStatus("Reading the current LinkedIn page...");
+  setStatus("Reading the current job page...");
   refreshButton.disabled = true;
 
   try {
     const tab = await getActiveTab();
 
-    if (!tab?.id || !isLinkedInJobsUrl(tab.url)) {
-      throw new Error("Open a LinkedIn job page before capturing.");
+    if (!tab?.id || !isSupportedJobUrl(tab.url)) {
+      throw new Error("Open a LinkedIn or Wellfound job page before capturing.");
     }
 
     const job = await requestJobData(tab.id);
@@ -111,14 +111,22 @@ async function sendExtractMessage(tabId) {
   const response = await chrome.tabs.sendMessage(tabId, { type: MESSAGE_TYPE });
 
   if (!response?.ok) {
-    throw new Error(response?.error || "LinkedIn job data was not available on this page.");
+    throw new Error(response?.error || "Job data was not available on this page.");
   }
 
   return response.job;
 }
 
+function isSupportedJobUrl(url) {
+  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url);
+}
+
 function isLinkedInJobsUrl(url) {
   return /^https:\/\/www\.linkedin\.com\/jobs\//.test(url || "");
+}
+
+function isWellfoundJobsUrl(url) {
+  return /^https:\/\/wellfound\.com\/jobs\/\d+/.test(url || "");
 }
 
 function setStatus(message) {
@@ -195,7 +203,7 @@ function buildRoleFilename(markdown) {
   const role = extractMarkdownSection(markdown, "Role");
   const slug = slugify([company, role].filter(Boolean).join("-"));
 
-  return `${slug || "linkedin-role"}.md`;
+  return `${slug || "job-role"}.md`;
 }
 
 function extractMarkdownSection(markdown, heading) {
