@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Orionis Capture",
-  "description": "Capture LinkedIn, Wellfound, BigRemoteJob, and Not Yet Unicorns job posts as Orionis-compatible Markdown.",
+  "description": "Capture LinkedIn, Wellfound, BigRemoteJob, and Not Yet Unicorns job posts as structured Markdown.",
   "version": "0.1.0",
   "permissions": ["activeTab", "clipboardWrite", "sidePanel", "scripting"],
   "host_permissions": [
@@ -17,7 +17,7 @@
     "128": "assets/icon-128.png"
   },
   "action": {
-    "default_title": "Capture job for Orionis",
+    "default_title": "Capture job as Markdown",
     "default_icon": {
       "16": "assets/icon-16.png",
       "32": "assets/icon-32.png",

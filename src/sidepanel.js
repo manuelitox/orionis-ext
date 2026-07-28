@@ -29,7 +29,7 @@ async function captureCurrentTab() {
 
     const job = await requestJobData(tab.id);
     markdownEditor.value = buildOrionisMarkdown(job);
-    setStatus("Markdown generated. Review and edit anything that needs cleanup.");
+    setStatus("Markdown ready. Review, copy, or save it.");
   } catch (error) {
     setStatus(error.message || "Could not capture this page.");
   } finally {
@@ -61,12 +61,12 @@ async function saveRole() {
   try {
     if (!supportsDirectoryPicker()) {
       downloadMarkdown(markdown, filename);
-      setStatus(`Downloaded ${filename}.`);
+      setStatus(`Saved ${filename} as a download.`);
       return;
     }
 
     saveButton.disabled = true;
-    setStatus(rolesDirectoryHandle ? "Saving role..." : "Choose your Orionis roles folder.");
+    setStatus(rolesDirectoryHandle ? "Saving Markdown..." : "Choose where to save Markdown files.");
 
     if (!rolesDirectoryHandle) {
       rolesDirectoryHandle = await window.showDirectoryPicker({ mode: "readwrite" });
@@ -83,7 +83,7 @@ async function saveRole() {
 
     rolesDirectoryHandle = null;
     downloadMarkdown(markdown, filename);
-    setStatus(`Could not write to folder, downloaded ${filename} instead.`);
+    setStatus(`Could not write to folder, saved ${filename} as a download instead.`);
   } finally {
     saveButton.disabled = false;
   }
