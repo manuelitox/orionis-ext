@@ -24,7 +24,7 @@ async function captureCurrentTab() {
     const tab = await getActiveTab();
 
     if (!tab?.id || !isSupportedJobUrl(tab.url)) {
-      throw new Error("Open a LinkedIn, Wellfound, or BigRemoteJob job page before capturing.");
+      throw new Error("Open a LinkedIn, Wellfound, BigRemoteJob, or Not Yet Unicorns job page before capturing.");
     }
 
     const job = await requestJobData(tab.id);
@@ -118,7 +118,7 @@ async function sendExtractMessage(tabId) {
 }
 
 function isSupportedJobUrl(url) {
-  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url);
+  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url) || isNotYetUnicornsJobUrl(url);
 }
 
 function isLinkedInJobsUrl(url) {
@@ -131,6 +131,10 @@ function isWellfoundJobsUrl(url) {
 
 function isBigRemoteJobUrl(url) {
   return /^https:\/\/bigremotejob\.com\/remote-jobs\//.test(url || "");
+}
+
+function isNotYetUnicornsJobUrl(url) {
+  return /^https:\/\/notyetunicorns\.com\/job\//.test(url || "");
 }
 
 function setStatus(message) {

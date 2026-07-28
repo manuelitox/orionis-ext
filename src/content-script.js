@@ -61,6 +61,27 @@
       return job;
     }
 
+    if (isNotYetUnicornsJobPage()) {
+      const job = {
+        title: getNotYetUnicornsJobTitle(),
+        company: getNotYetUnicornsCompanyName(),
+        website: getNotYetUnicornsCompanyWebsite(),
+        salary: getNotYetUnicornsSalary(),
+        url: window.location.href,
+        description: getNotYetUnicornsJobDescription()
+      };
+
+      if (!job.title && !job.company && !job.description) {
+        throw new Error("Not Yet Unicorns page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
+      }
+
+      if (!job.description) {
+        throw new Error("Not Yet Unicorns page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
+      }
+
+      return job;
+    }
+
     throw new Error("This page is not a supported job posting.");
   }
 
@@ -74,6 +95,10 @@
 
   function isBigRemoteJobPage() {
     return /^https:\/\/bigremotejob\.com\/remote-jobs\//.test(window.location.href);
+  }
+
+  function isNotYetUnicornsJobPage() {
+    return /^https:\/\/notyetunicorns\.com\/job\//.test(window.location.href);
   }
 
   function getLinkedInJobTitle() {
@@ -354,6 +379,90 @@
       .sort((a, b) => b.text.length - a.text.length)[0]?.element || null;
   }
 
+  function getNotYetUnicornsJobTitle() {
+    const nextData = getNotYetUnicornsNextData();
+    const schema = getNotYetUnicornsJobPostingSchema();
+
+    return cleanText(
+      nextData?.job?.role_title ||
+      schema?.title ||
+      textFromFirst([
+        "[class*='JobDetailHeader'][class*='jobTitle']",
+        "header h1",
+        "main h1",
+        "h1"
+      ]) ||
+      parseNotYetUnicornsTitleFromDocument()
+    );
+  }
+
+  function getNotYetUnicornsCompanyName() {
+    const nextData = getNotYetUnicornsNextData();
+    const schema = getNotYetUnicornsJobPostingSchema();
+
+    return cleanText(
+      nextData?.job?.company_name ||
+      nextData?.company?.name ||
+      schema?.hiringOrganization?.name ||
+      textFromFirst([
+        "[class*='JobDetailHeader'][class*='companyName'] a",
+        "a[href^='/company/']"
+      ]) ||
+      parseNotYetUnicornsCompanyFromDocument()
+    );
+  }
+
+  function getNotYetUnicornsCompanyWebsite() {
+    const nextData = getNotYetUnicornsNextData();
+    const schema = getNotYetUnicornsJobPostingSchema();
+
+    return (
+      cleanText(nextData?.company?.website_url || schema?.hiringOrganization?.sameAs || "") ||
+      hrefFromFirst([
+        "a[class*='companyLink'][href^='http']",
+        "a[title='Visit website'][href^='http']",
+        "aside a[href^='http']",
+        "header a[href^='http']"
+      ], isExternalWebsiteHref) ||
+      ""
+    );
+  }
+
+  function getNotYetUnicornsSalary() {
+    const nextData = getNotYetUnicornsNextData();
+    const schema = getNotYetUnicornsJobPostingSchema();
+    const salaryRange = cleanText(nextData?.job?.salary_range || "");
+
+    if (salaryRange) {
+      return normalizeSalary(salaryRange);
+    }
+
+    const schemaSalary = formatNotYetUnicornsSchemaSalary(schema?.baseSalary);
+    if (schemaSalary) {
+      return normalizeSalary(schemaSalary);
+    }
+
+    return normalizeSalary(
+      textFromFirst(["[class*='JobDetailHeader'][class*='salary']"]) ||
+      firstSalaryMatch(cleanText(document.body?.innerText || ""))
+    );
+  }
+
+  function getNotYetUnicornsJobDescription() {
+    const nextData = getNotYetUnicornsNextData();
+    const schema = getNotYetUnicornsJobPostingSchema();
+
+    return cleanText(
+      nextData?.job?.description ||
+      schema?.description ||
+      textFromFirst([
+        "[class*='JobDescription'][class*='content']",
+        "section[class*='JobDescription']"
+      ]) ||
+      extractNotYetUnicornsDescription(cleanText(document.body?.innerText || ""))
+    );
+  }
+
   function textFromFirst(selectors) {
     const element = firstVisibleElement(selectors);
     return cleanText(element?.innerText || element?.textContent || "");
@@ -466,6 +575,16 @@
     return cleanText(match?.[1] || "");
   }
 
+  function parseNotYetUnicornsTitleFromDocument() {
+    const title = document.title.split("|")[0]?.trim() || document.title;
+    return cleanText(title.replace(/\s+at\s+.+$/i, ""));
+  }
+
+  function parseNotYetUnicornsCompanyFromDocument() {
+    const match = document.title.match(/\s+at\s+(.+?)\s*(?:\||$)/i);
+    return cleanText(match?.[1] || "");
+  }
+
   function parseBigRemoteJobMetaField(label) {
     const description = cleanText(
       document.querySelector("meta[property='og:description']")?.content ||
@@ -546,6 +665,13 @@
     );
   }
 
+  function extractNotYetUnicornsDescription(text) {
+    return (
+      extractTextBetween(text, /about us|job description|the role/i, notYetUnicornsDescriptionEndPatterns()) ||
+      ""
+    );
+  }
+
   function extractTextBetween(text, startPattern, endPatterns) {
     const lines = String(text || "")
       .split("\n")
@@ -589,6 +715,88 @@
     ];
   }
 
+  function notYetUnicornsDescriptionEndPatterns() {
+    return [
+      /^apply now$/i,
+      /^browse all jobs$/i,
+      /^about\s+.+$/i,
+      /^location$/i,
+      /^work style$/i,
+      /^tech stack$/i,
+      /^industry$/i
+    ];
+  }
+
+  function getNotYetUnicornsNextData() {
+    const root = parseJsonScript("#__NEXT_DATA__");
+    return root?.props?.pageProps?.jobData || null;
+  }
+
+  function getNotYetUnicornsJobPostingSchema() {
+    const schemas = Array.from(document.querySelectorAll("script[type='application/ld+json']"))
+      .map((element) => parseJsonValue(element.textContent))
+      .filter(Boolean);
+
+    return schemas
+      .flatMap((schema) => Array.isArray(schema) ? schema : [schema])
+      .find((schema) => schema?.["@type"] === "JobPosting") || null;
+  }
+
+  function parseJsonScript(selector) {
+    return parseJsonValue(document.querySelector(selector)?.textContent || "");
+  }
+
+  function parseJsonValue(value) {
+    try {
+      return JSON.parse(value);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function formatNotYetUnicornsSchemaSalary(baseSalary) {
+    const value = baseSalary?.value;
+    const currencySymbol = salaryCurrencySymbol(baseSalary?.currency);
+
+    if (!value) {
+      return "";
+    }
+
+    if (value.minValue && value.maxValue) {
+      return `${currencySymbol}${formatCompactSalaryNumber(value.minValue)}-${currencySymbol}${formatCompactSalaryNumber(value.maxValue)}`;
+    }
+
+    if (value.value) {
+      return `${currencySymbol}${formatCompactSalaryNumber(value.value)}`;
+    }
+
+    return "";
+  }
+
+  function salaryCurrencySymbol(currency) {
+    const symbols = {
+      GBP: "£",
+      USD: "$",
+      EUR: "€"
+    };
+
+    return symbols[currency] || cleanText(currency || "");
+  }
+
+  function formatCompactSalaryNumber(value) {
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+      return cleanText(value || "");
+    }
+
+    if (number >= 1000 && number % 1000 === 0) {
+      return `${number / 1000}k`;
+    }
+
+    return String(number);
+  }
+
   function firstSalaryMatch(text) {
     const matches = String(text || "").match(
       /(?:[$€£₹]\s?\d[\d.,]*\s?[kKmM]?(?:\s*[–-]\s*[$€£₹]?\s?\d[\d.,]*\s?[kKmM]?)?(?:\s*•\s*(?:no equity|[\d.,]+%\s*[–-]\s*[\d.,]+%))?)/i
@@ -620,7 +828,7 @@
     return Boolean(
       href &&
       /^https?:\/\//.test(href) &&
-      !/linkedin\.com|wellfound\.com|bigremotejob\.com/.test(href)
+      !/linkedin\.com|wellfound\.com|bigremotejob\.com|notyetunicorns\.com/.test(href)
     );
   }
 
