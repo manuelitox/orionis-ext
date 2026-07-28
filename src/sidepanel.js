@@ -24,7 +24,7 @@ async function captureCurrentTab() {
     const tab = await getActiveTab();
 
     if (!tab?.id || !isSupportedJobUrl(tab.url)) {
-      throw new Error("Open a LinkedIn or Wellfound job page before capturing.");
+      throw new Error("Open a LinkedIn, Wellfound, or BigRemoteJob job page before capturing.");
     }
 
     const job = await requestJobData(tab.id);
@@ -118,7 +118,7 @@ async function sendExtractMessage(tabId) {
 }
 
 function isSupportedJobUrl(url) {
-  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url);
+  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url);
 }
 
 function isLinkedInJobsUrl(url) {
@@ -127,6 +127,10 @@ function isLinkedInJobsUrl(url) {
 
 function isWellfoundJobsUrl(url) {
   return /^https:\/\/wellfound\.com\/jobs\/\d+/.test(url || "");
+}
+
+function isBigRemoteJobUrl(url) {
+  return /^https:\/\/bigremotejob\.com\/remote-jobs\//.test(url || "");
 }
 
 function setStatus(message) {
