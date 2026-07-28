@@ -442,10 +442,7 @@
       return normalizeSalary(schemaSalary);
     }
 
-    return normalizeSalary(
-      textFromFirst(["[class*='JobDetailHeader'][class*='salary']"]) ||
-      firstSalaryMatch(cleanText(document.body?.innerText || ""))
-    );
+    return normalizeSalary(textFromFirst(["[class*='JobDetailHeader'][class*='salary']"]));
   }
 
   function getNotYetUnicornsJobDescription() {
