@@ -40,6 +40,27 @@
       };
     }
 
+    if (isBigRemoteJobPage()) {
+      const job = {
+        title: getBigRemoteJobTitle(),
+        company: getBigRemoteJobCompanyName(),
+        website: getBigRemoteJobCompanyWebsite(),
+        salary: getBigRemoteJobSalary(),
+        url: window.location.href,
+        description: getBigRemoteJobDescription()
+      };
+
+      if (!job.title && !job.company && !job.description) {
+        throw new Error("BigRemoteJob page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
+      }
+
+      if (!job.description) {
+        throw new Error("BigRemoteJob page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
+      }
+
+      return job;
+    }
+
     throw new Error("This page is not a supported job posting.");
   }
 
@@ -49,6 +70,10 @@
 
   function isWellfoundJobPage() {
     return /^https:\/\/wellfound\.com\/jobs(\/|$)/.test(window.location.href);
+  }
+
+  function isBigRemoteJobPage() {
+    return /^https:\/\/bigremotejob\.com\/remote-jobs\//.test(window.location.href);
   }
 
   function getLinkedInJobTitle() {
@@ -255,6 +280,80 @@
     }
   }
 
+  function getBigRemoteJobTitle() {
+    return (
+      textFromFirst([
+        "h1.bde-heading",
+        ".section-container h1",
+        "article h1",
+        "main h1",
+        "h1"
+      ]) || parseBigRemoteJobTitleFromDocument()
+    );
+  }
+
+  function getBigRemoteJobCompanyName() {
+    return (
+      textFromFirst([
+        ".bde-post-meta-50-168 .ee-postmeta-author",
+        ".ee-postmeta-author",
+        ".pp-multiple-authors-boxes-name a",
+        "[rel='author']"
+      ]) || parseBigRemoteJobMetaField("Company") || parseBigRemoteJobCompanyFromDocument()
+    );
+  }
+
+  function getBigRemoteJobCompanyWebsite() {
+    return (
+      hrefFromFirst([
+        ".ppma-author-user_url-profile-data[href]",
+        "a[aria-label='Website'][href]",
+        ".pp-author-boxes-avatar-details a[href^='http']"
+      ], isExternalWebsiteHref) || ""
+    );
+  }
+
+  function getBigRemoteJobSalary() {
+    const visibleSalary = textFromFirst([
+      ".bde-post-meta-50-174 .ee-postmeta-term",
+      ".ee-postmeta-term"
+    ]);
+
+    if (visibleSalary && /[$€£₹]/.test(visibleSalary)) {
+      return normalizeSalary(visibleSalary);
+    }
+
+    return normalizeSalary(parseBigRemoteJobMetaField("Salary") || firstSalaryMatch(cleanText(document.body?.innerText || "")));
+  }
+
+  function getBigRemoteJobDescription() {
+    const directDescription = cleanText(bigRemoteJobDescriptionElement()?.innerText || "");
+
+    if (directDescription) {
+      return stripBigRemoteJobBoilerplate(directDescription);
+    }
+
+    const pageText = cleanText(document.body?.innerText || "");
+    return stripBigRemoteJobBoilerplate(
+      extractBigRemoteJobDescription(pageText) ||
+      cleanText(bestTextElement(["article", "main", ".section-container"])?.innerText || "")
+    );
+  }
+
+  function bigRemoteJobDescriptionElement() {
+    const directElement = firstVisibleElement([".bde-rich-text-50-105"]);
+
+    if (directElement) {
+      return directElement;
+    }
+
+    return Array.from(document.querySelectorAll(".breakdance-rich-text-styles, [class*='rich-text']"))
+      .filter(isVisible)
+      .map((element) => ({ element, text: cleanText(element.innerText || element.textContent || "") }))
+      .filter((candidate) => /who we are|your team and role|about you|compensation|hiring process/i.test(candidate.text))
+      .sort((a, b) => b.text.length - a.text.length)[0]?.element || null;
+  }
+
   function textFromFirst(selectors) {
     const element = firstVisibleElement(selectors);
     return cleanText(element?.innerText || element?.textContent || "");
@@ -357,6 +456,28 @@
     return cleanText(byBullet[1] || "");
   }
 
+  function parseBigRemoteJobTitleFromDocument() {
+    const title = document.title.replace(/^Remote\s+/i, "").replace(/\s+at\s+.+$/i, "");
+    return cleanText(title);
+  }
+
+  function parseBigRemoteJobCompanyFromDocument() {
+    const match = document.title.match(/\s+at\s+(.+)$/i);
+    return cleanText(match?.[1] || "");
+  }
+
+  function parseBigRemoteJobMetaField(label) {
+    const description = cleanText(
+      document.querySelector("meta[property='og:description']")?.content ||
+      document.querySelector("meta[name='description']")?.content ||
+      ""
+    );
+    const pattern = new RegExp(`${escapeRegExp(label)}:\\s*([^🪛🌎💸🚀🔥]+)`, "i");
+    const match = description.match(pattern);
+
+    return cleanText(match?.[1] || "");
+  }
+
   function findHeadingElement(pattern) {
     return Array.from(
       document.querySelectorAll("h1, h2, h3, h4, [role='heading']")
@@ -398,11 +519,29 @@
     );
   }
 
+  function stripBigRemoteJobBoilerplate(text) {
+    return cleanText(
+      text
+        .replace(/\n?apply for this position[\s\S]*$/i, "")
+        .replace(/\n?this job was posted via[\s\S]*$/i, "")
+        .replace(/\n?please mention bigremotejob[\s\S]*$/i, "")
+        .replace(/\n?related jobs:[\s\S]*$/i, "")
+        .replace(/\n?website:\s*https?:\/\/\S+[\s\S]*$/i, "")
+    );
+  }
+
   function extractWellfoundDescription(text) {
     return (
       extractTextBetween(text, /about the job/i, wellfoundDescriptionEndPatterns()) ||
       extractTextBetween(text, /job description/i, wellfoundDescriptionEndPatterns()) ||
       extractTextBetween(text, /the role/i, wellfoundDescriptionEndPatterns()) ||
+      ""
+    );
+  }
+
+  function extractBigRemoteJobDescription(text) {
+    return (
+      extractTextBetween(text, /who we are|job description|about the role|your team and role/i, bigRemoteJobDescriptionEndPatterns()) ||
       ""
     );
   }
@@ -439,6 +578,17 @@
     ];
   }
 
+  function bigRemoteJobDescriptionEndPatterns() {
+    return [
+      /^apply for this position$/i,
+      /^related jobs:?$/i,
+      /^website:\s*https?:\/\//i,
+      /^hq location:/i,
+      /^established:/i,
+      /^company size:/i
+    ];
+  }
+
   function firstSalaryMatch(text) {
     const matches = String(text || "").match(
       /(?:[$€£₹]\s?\d[\d.,]*\s?[kKmM]?(?:\s*[–-]\s*[$€£₹]?\s?\d[\d.,]*\s?[kKmM]?)?(?:\s*•\s*(?:no equity|[\d.,]+%\s*[–-]\s*[\d.,]+%))?)/i
@@ -470,7 +620,7 @@
     return Boolean(
       href &&
       /^https?:\/\//.test(href) &&
-      !/linkedin\.com|wellfound\.com/.test(href)
+      !/linkedin\.com|wellfound\.com|bigremotejob\.com/.test(href)
     );
   }
 
@@ -487,6 +637,10 @@
       .replace(/^\s*(show more|show less|see more|see less)\s*$/gim, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
+  }
+
+  function escapeRegExp(value) {
+    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   function wait(milliseconds) {
