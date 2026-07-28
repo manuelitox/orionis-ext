@@ -1,8 +1,52 @@
 # Orionis Capture
 
-Browser extension companion for Orionis. It captures the currently open LinkedIn, Wellfound, BigRemoteJob, or Not Yet Unicorns job page and prepares editable Orionis-compatible Markdown.
+Orionis Capture is a lightweight browser extension that turns supported job posts into structured, editable Markdown.
+
+It is designed for people who collect job descriptions for notes, AI-assisted workflows, role tracking, or Orionis. The extension reads the job page you are already viewing, prepares a clean Markdown draft, and lets you copy or save it.
+
+## Supported Sites
+
+Initial support:
+
+- LinkedIn Jobs
+- Wellfound
+- BigRemoteJob
+- Not Yet Unicorns
+
+## Markdown Format
+
+Orionis Capture uses one fixed Markdown structure:
+
+```md
+# Company
+
+# Role
+
+# Official Website
+
+# JD URL
+
+# JD
+
+# Notes
+```
+
+The extension captures visible and verifiable fields from the current page. It does not guess hidden fields or infer details that are not available in the job post.
+
+## Workflow
+
+1. Open a supported job post.
+2. Open the Orionis Capture side panel.
+3. Review the generated Markdown.
+4. Click Copy Markdown or Save Markdown.
+
+The Markdown remains editable before copying or saving, so you can clean up any site-specific formatting issues.
 
 ## Install Locally
+
+Orionis Capture is not published in the Chrome Web Store yet. For now, the only installation option is a manual Developer Mode installation for testing or local use. For regular users, the recommended installation path will be the Chrome Web Store once the extension is published.
+
+Orionis Capture is built for Chrome and other Chromium-based browsers that support Manifest V3 and extension side panels. Manual installation has been tested with Chrome and Brave.
 
 Chrome:
 
@@ -10,7 +54,7 @@ Chrome:
 2. Enable Developer mode.
 3. Click Load unpacked.
 4. Select this project directory.
-5. Open a LinkedIn, Wellfound, BigRemoteJob, or Not Yet Unicorns job page and click the extension action.
+5. Open a supported job post and click the extension action.
 
 Brave:
 
@@ -18,21 +62,39 @@ Brave:
 2. Enable Developer mode.
 3. Click Load unpacked.
 4. Select this project directory.
-5. Open a LinkedIn, Wellfound, BigRemoteJob, or Not Yet Unicorns job page and click the extension action.
+5. Open a supported job post and click the extension action.
 
-Brave is Chromium-based, so the extension should work there as long as your Brave version supports extension side panels.
+## Privacy
 
-## Workflow
+Orionis Capture is local-first:
 
-1. Open a LinkedIn, Wellfound, BigRemoteJob, or Not Yet Unicorns job post.
-2. Open the Orionis Capture side panel.
-3. Review or edit the generated Markdown.
-4. Click Save Role and choose your Orionis `roles/` folder.
+- No account is required.
+- No backend is used.
+- No job data is sent to external servers.
+- No background scraping is performed.
+- The extension only reads the active tab on supported job sites.
+- You decide when to copy, download, or save the generated Markdown.
 
-You can also click Copy Markdown and paste or save it manually.
+## Limitations
 
-## Scope
+- Job sites can change their HTML, which may break extraction until the extension is updated.
+- Some fields may be empty if the job page does not expose them clearly.
+- Salary and company website are captured only when visible or detectable.
+- Unsupported job sites are ignored.
+- The extension does not analyze, rank, or classify jobs.
+- The generated Markdown should be reviewed before use.
 
-This extension only extracts data from the page you are already viewing. It does not run Orionis analysis, scrape LinkedIn in the background, sync data, or store job posts.
+## Roadmap
 
-Save Role uses the browser folder picker when available. If direct folder writing is unavailable, it falls back to downloading a `.md` file.
+Distribution:
+
+- Publish to the Chrome Web Store
+
+Potential future site support:
+
+- Greenhouse
+- Lever
+- Ashby
+- Workable
+- Workday
+- Indeed
