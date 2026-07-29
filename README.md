@@ -18,11 +18,15 @@ Initial support:
 Orionis Capture uses one fixed Markdown structure:
 
 ```md
+# Captured At
+
 # Company
 
 # Role
 
 # Official Website
+
+# Source
 
 # JD URL
 
@@ -31,7 +35,7 @@ Orionis Capture uses one fixed Markdown structure:
 # Notes
 ```
 
-The extension captures visible and verifiable fields from the current page. It does not guess hidden fields or infer details that are not available in the job post.
+The extension captures visible and verifiable fields from the current page. `Source` is derived from the current job URL, and `Captured At` is an ISO timestamp generated when the page is captured. It does not guess hidden fields or infer details that are not available in the job post.
 
 ## Workflow
 

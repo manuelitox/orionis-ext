@@ -126,7 +126,7 @@ function isLinkedInJobsUrl(url) {
 }
 
 function isWellfoundJobsUrl(url) {
-  return /^https:\/\/wellfound\.com\/jobs\/\d+/.test(url || "");
+  return /^https:\/\/wellfound\.com\/jobs(?:[/?#]|$)/.test(url || "");
 }
 
 function isBigRemoteJobUrl(url) {
