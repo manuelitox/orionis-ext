@@ -3,10 +3,15 @@ export function buildOrionisMarkdown(job) {
   const role = normalizeField(job.title);
   const website = normalizeField(job.website);
   const salary = normalizeField(job.salary);
+  const source = normalizeField(job.source);
+  const capturedAt = normalizeField(job.captured_at);
   const jdUrl = normalizeField(job.url);
   const jd = normalizeBody(joinJdParts(salary, job.description));
 
-  return `# Company
+  return `# Captured At
+${capturedAt}
+
+# Company
 ${company}
 
 # Role
@@ -14,6 +19,9 @@ ${role}
 
 # Official Website
 ${website}
+
+# Source
+${source}
 
 # JD URL
 ${jdUrl}

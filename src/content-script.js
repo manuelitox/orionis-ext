@@ -1,5 +1,55 @@
 (() => {
   const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
+  const JOB_SOURCES = [
+    {
+      source: "linkedIn",
+      urlPattern: /^https:\/\/www\.linkedin\.com\/jobs\//,
+      beforeExtract: expandLinkedInJobDescription,
+      fields: {
+        title: getLinkedInJobTitle,
+        company: getLinkedInCompanyName,
+        website: getLinkedInCompanyWebsite,
+        salary: getLinkedInSalary,
+        description: getLinkedInJobDescription
+      }
+    },
+    {
+      source: "wellfound",
+      urlPattern: /^https:\/\/wellfound\.com\/jobs(?:[/?#]|$)/,
+      beforeExtract: expandWellfoundJobDescription,
+      fields: {
+        title: getWellfoundJobTitle,
+        company: getWellfoundCompanyName,
+        website: getWellfoundCompanyWebsite,
+        salary: getWellfoundSalary,
+        description: getWellfoundJobDescription
+      }
+    },
+    {
+      source: "bigRemoteJob",
+      urlPattern: /^https:\/\/bigremotejob\.com\/remote-jobs\//,
+      fields: {
+        title: getBigRemoteJobTitle,
+        company: getBigRemoteJobCompanyName,
+        website: getBigRemoteJobCompanyWebsite,
+        salary: getBigRemoteJobSalary,
+        description: getBigRemoteJobDescription
+      },
+      validate: validateBigRemoteJob
+    },
+    {
+      source: "notYetUnicorns",
+      urlPattern: /^https:\/\/notyetunicorns\.com\/job\//,
+      fields: {
+        title: getNotYetUnicornsJobTitle,
+        company: getNotYetUnicornsCompanyName,
+        website: getNotYetUnicornsCompanyWebsite,
+        salary: getNotYetUnicornsSalary,
+        description: getNotYetUnicornsJobDescription
+      },
+      validate: validateNotYetUnicornsJob
+    }
+  ];
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type !== MESSAGE_TYPE) {
@@ -14,91 +64,64 @@
   });
 
   async function extractJob() {
-    if (isLinkedInJobPage()) {
-      await expandLinkedInJobDescription();
+    const jobSource = findJobSource(window.location.href);
 
-      return {
-        title: getLinkedInJobTitle(),
-        company: getLinkedInCompanyName(),
-        website: getLinkedInCompanyWebsite(),
-        salary: getLinkedInSalary(),
-        url: window.location.href,
-        description: getLinkedInJobDescription()
-      };
+    if (!jobSource) {
+      throw new Error("This page is not a supported job posting.");
     }
 
-    if (isWellfoundJobPage()) {
-      await expandWellfoundJobDescription();
+    await jobSource.beforeExtract?.();
 
-      return {
-        title: getWellfoundJobTitle(),
-        company: getWellfoundCompanyName(),
-        website: getWellfoundCompanyWebsite(),
-        salary: getWellfoundSalary(),
-        url: window.location.href,
-        description: getWellfoundJobDescription()
-      };
+    const job = buildJob(jobSource);
+
+    jobSource.validate?.(job);
+
+    return job;
+  }
+
+  function buildJob(jobSource) {
+    return {
+      ...buildCaptureMetadata(jobSource.source),
+      ...extractJobFields(jobSource.fields),
+      url: window.location.href
+    };
+  }
+
+  function extractJobFields(fields) {
+    return Object.fromEntries(
+      Object.entries(fields).map(([name, getValue]) => [name, getValue()])
+    );
+  }
+
+  function validateBigRemoteJob(job) {
+    if (!job.title && !job.company && !job.description) {
+      throw new Error("BigRemoteJob page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
     }
 
-    if (isBigRemoteJobPage()) {
-      const job = {
-        title: getBigRemoteJobTitle(),
-        company: getBigRemoteJobCompanyName(),
-        website: getBigRemoteJobCompanyWebsite(),
-        salary: getBigRemoteJobSalary(),
-        url: window.location.href,
-        description: getBigRemoteJobDescription()
-      };
+    if (!job.description) {
+      throw new Error("BigRemoteJob page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
+    }
+  }
 
-      if (!job.title && !job.company && !job.description) {
-        throw new Error("BigRemoteJob page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
-      }
-
-      if (!job.description) {
-        throw new Error("BigRemoteJob page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
-      }
-
-      return job;
+  function validateNotYetUnicornsJob(job) {
+    if (!job.title && !job.company && !job.description) {
+      throw new Error("Not Yet Unicorns page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
     }
 
-    if (isNotYetUnicornsJobPage()) {
-      const job = {
-        title: getNotYetUnicornsJobTitle(),
-        company: getNotYetUnicornsCompanyName(),
-        website: getNotYetUnicornsCompanyWebsite(),
-        salary: getNotYetUnicornsSalary(),
-        url: window.location.href,
-        description: getNotYetUnicornsJobDescription()
-      };
-
-      if (!job.title && !job.company && !job.description) {
-        throw new Error("Not Yet Unicorns page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
-      }
-
-      if (!job.description) {
-        throw new Error("Not Yet Unicorns page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
-      }
-
-      return job;
+    if (!job.description) {
+      throw new Error("Not Yet Unicorns page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
     }
-
-    throw new Error("This page is not a supported job posting.");
   }
 
-  function isLinkedInJobPage() {
-    return /^https:\/\/www\.linkedin\.com\/jobs\//.test(window.location.href);
+  function buildCaptureMetadata(source) {
+    return {
+      source,
+      captured_at: new Date().toISOString()
+    };
   }
 
-  function isWellfoundJobPage() {
-    return /^https:\/\/wellfound\.com\/jobs(\/|$)/.test(window.location.href);
-  }
-
-  function isBigRemoteJobPage() {
-    return /^https:\/\/bigremotejob\.com\/remote-jobs\//.test(window.location.href);
-  }
-
-  function isNotYetUnicornsJobPage() {
-    return /^https:\/\/notyetunicorns\.com\/job\//.test(window.location.href);
+  function findJobSource(url) {
+    return JOB_SOURCES.find((jobSource) => jobSource.urlPattern.test(url || ""));
   }
 
   function getLinkedInJobTitle() {
