@@ -24,7 +24,7 @@ async function captureCurrentTab() {
     const tab = await getActiveTab();
 
     if (!tab?.id || !isSupportedJobUrl(tab.url)) {
-      throw new Error("Open a LinkedIn, Wellfound, BigRemoteJob, or Not Yet Unicorns job page before capturing.");
+      throw new Error("Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, or Ashby job page before capturing.");
     }
 
     const job = await requestJobData(tab.id);
@@ -118,7 +118,7 @@ async function sendExtractMessage(tabId) {
 }
 
 function isSupportedJobUrl(url) {
-  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url) || isNotYetUnicornsJobUrl(url);
+  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url) || isNotYetUnicornsJobUrl(url) || isAshbyJobUrl(url);
 }
 
 function isLinkedInJobsUrl(url) {
@@ -135,6 +135,10 @@ function isBigRemoteJobUrl(url) {
 
 function isNotYetUnicornsJobUrl(url) {
   return /^https:\/\/notyetunicorns\.com\/job\//.test(url || "");
+}
+
+function isAshbyJobUrl(url) {
+  return /^https:\/\/jobs\.ashbyhq\.com\/[^/?#]+\/[0-9a-f-]+\/?(?:[?#].*)?$/i.test(url || "");
 }
 
 function setStatus(message) {

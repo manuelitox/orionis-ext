@@ -12,6 +12,7 @@ Initial support:
 - Wellfound
 - BigRemoteJob
 - Not Yet Unicorns
+- Ashby
 
 ## Markdown Format
 
@@ -98,7 +99,6 @@ Potential future site support:
 
 - Greenhouse
 - Lever
-- Ashby
 - Workable
 - Workday
 - Indeed
