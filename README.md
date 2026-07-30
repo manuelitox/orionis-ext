@@ -53,12 +53,19 @@ Orionis Capture is not published in the Chrome Web Store yet. For now, the only 
 
 Orionis Capture is built for Chrome and other Chromium-based browsers that support Manifest V3 and extension side panels. Manual installation has been tested with Chrome and Brave.
 
+Build the extension before loading it:
+
+```sh
+npm install
+npm run build
+```
+
 Chrome:
 
 1. Open `chrome://extensions`.
 2. Enable Developer mode.
 3. Click Load unpacked.
-4. Select this project directory.
+4. Select the generated `dist` directory.
 5. Open a supported job post and click the extension action.
 
 Brave:
@@ -66,7 +73,7 @@ Brave:
 1. Open `brave://extensions`.
 2. Enable Developer mode.
 3. Click Load unpacked.
-4. Select this project directory.
+4. Select the generated `dist` directory.
 5. Open a supported job post and click the extension action.
 
 ## Privacy

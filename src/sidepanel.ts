@@ -1,14 +1,15 @@
 import { buildOrionisMarkdown } from "./markdown-template.js";
+import type { CapturedJob, ExtractJobMessage, ExtractJobResponse } from "./types.js";
 
 const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
 
-const markdownEditor = document.querySelector("#markdown");
-const statusText = document.querySelector("#status");
-const refreshButton = document.querySelector("#refresh");
-const copyButton = document.querySelector("#copy");
-const saveButton = document.querySelector("#save");
+const markdownEditor = queryRequiredElement<HTMLTextAreaElement>("#markdown");
+const statusText = queryRequiredElement<HTMLElement>("#status");
+const refreshButton = queryRequiredElement<HTMLButtonElement>("#refresh");
+const copyButton = queryRequiredElement<HTMLButtonElement>("#copy");
+const saveButton = queryRequiredElement<HTMLButtonElement>("#save");
 
-let rolesDirectoryHandle = null;
+let rolesDirectoryHandle: FileSystemDirectoryHandle | null = null;
 
 refreshButton.addEventListener("click", captureCurrentTab);
 copyButton.addEventListener("click", copyMarkdown);
@@ -16,7 +17,7 @@ saveButton.addEventListener("click", saveRole);
 
 captureCurrentTab();
 
-async function captureCurrentTab() {
+async function captureCurrentTab(): Promise<void> {
   setStatus("Reading the current job page...");
   refreshButton.disabled = true;
 
@@ -31,13 +32,13 @@ async function captureCurrentTab() {
     markdownEditor.value = buildOrionisMarkdown(job);
     setStatus("Markdown ready. Review, copy, or save it.");
   } catch (error) {
-    setStatus(error.message || "Could not capture this page.");
+    setStatus(errorMessage(error, "Could not capture this page."));
   } finally {
     refreshButton.disabled = false;
   }
 }
 
-async function copyMarkdown() {
+async function copyMarkdown(): Promise<void> {
   try {
     await navigator.clipboard.writeText(markdownEditor.value);
     setStatus("Markdown copied.");
@@ -48,7 +49,7 @@ async function copyMarkdown() {
   }
 }
 
-async function saveRole() {
+async function saveRole(): Promise<void> {
   const markdown = markdownEditor.value.trim();
 
   if (!markdown) {
@@ -76,7 +77,7 @@ async function saveRole() {
     const savedFilename = await writeUniqueFile(rolesDirectoryHandle, filename, markdown);
     setStatus(`Saved ${savedFilename}.`);
   } catch (error) {
-    if (error.name === "AbortError") {
+    if (hasErrorName(error, "AbortError")) {
       setStatus("Save cancelled.");
       return;
     }
@@ -89,12 +90,12 @@ async function saveRole() {
   }
 }
 
-async function getActiveTab() {
+async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
 }
 
-async function requestJobData(tabId) {
+async function requestJobData(tabId: number): Promise<CapturedJob> {
   try {
     return await sendExtractMessage(tabId);
   } catch (_error) {
@@ -107,50 +108,51 @@ async function requestJobData(tabId) {
   }
 }
 
-async function sendExtractMessage(tabId) {
-  const response = await chrome.tabs.sendMessage(tabId, { type: MESSAGE_TYPE });
+async function sendExtractMessage(tabId: number): Promise<CapturedJob> {
+  const message: ExtractJobMessage = { type: MESSAGE_TYPE };
+  const response = await chrome.tabs.sendMessage<ExtractJobMessage, ExtractJobResponse>(tabId, message);
 
-  if (!response?.ok) {
+  if (response?.ok !== true) {
     throw new Error(response?.error || "Job data was not available on this page.");
   }
 
   return response.job;
 }
 
-function isSupportedJobUrl(url) {
+function isSupportedJobUrl(url: string | undefined): boolean {
   return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url) || isNotYetUnicornsJobUrl(url) || isAshbyJobUrl(url);
 }
 
-function isLinkedInJobsUrl(url) {
+function isLinkedInJobsUrl(url: string | undefined): boolean {
   return /^https:\/\/www\.linkedin\.com\/jobs\//.test(url || "");
 }
 
-function isWellfoundJobsUrl(url) {
+function isWellfoundJobsUrl(url: string | undefined): boolean {
   return /^https:\/\/wellfound\.com\/jobs(?:[/?#]|$)/.test(url || "");
 }
 
-function isBigRemoteJobUrl(url) {
+function isBigRemoteJobUrl(url: string | undefined): boolean {
   return /^https:\/\/bigremotejob\.com\/remote-jobs\//.test(url || "");
 }
 
-function isNotYetUnicornsJobUrl(url) {
+function isNotYetUnicornsJobUrl(url: string | undefined): boolean {
   return /^https:\/\/notyetunicorns\.com\/job\//.test(url || "");
 }
 
-function isAshbyJobUrl(url) {
+function isAshbyJobUrl(url: string | undefined): boolean {
   return /^https:\/\/jobs\.ashbyhq\.com\/[^/?#]+\/[0-9a-f-]+\/?(?:[?#].*)?$/i.test(url || "");
 }
 
-function setStatus(message) {
+function setStatus(message: string): void {
   statusText.textContent = message;
 }
 
-function supportsDirectoryPicker() {
+function supportsDirectoryPicker(): boolean {
   return typeof window.showDirectoryPicker === "function";
 }
 
-async function ensureDirectoryPermission(directoryHandle) {
-  const options = { mode: "readwrite" };
+async function ensureDirectoryPermission(directoryHandle: FileSystemDirectoryHandle): Promise<void> {
+  const options: FileSystemHandlePermissionDescriptor = { mode: "readwrite" };
   const currentPermission = await directoryHandle.queryPermission(options);
 
   if (currentPermission === "granted") {
@@ -164,7 +166,11 @@ async function ensureDirectoryPermission(directoryHandle) {
   }
 }
 
-async function writeUniqueFile(directoryHandle, preferredFilename, markdown) {
+async function writeUniqueFile(
+  directoryHandle: FileSystemDirectoryHandle,
+  preferredFilename: string,
+  markdown: string
+): Promise<string> {
   const filename = await nextAvailableFilename(directoryHandle, preferredFilename);
   const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
   const writable = await fileHandle.createWritable();
@@ -175,7 +181,10 @@ async function writeUniqueFile(directoryHandle, preferredFilename, markdown) {
   return filename;
 }
 
-async function nextAvailableFilename(directoryHandle, preferredFilename) {
+async function nextAvailableFilename(
+  directoryHandle: FileSystemDirectoryHandle,
+  preferredFilename: string
+): Promise<string> {
   const dotIndex = preferredFilename.lastIndexOf(".");
   const basename = dotIndex > 0 ? preferredFilename.slice(0, dotIndex) : preferredFilename;
   const extension = dotIndex > 0 ? preferredFilename.slice(dotIndex) : "";
@@ -186,7 +195,7 @@ async function nextAvailableFilename(directoryHandle, preferredFilename) {
     try {
       await directoryHandle.getFileHandle(filename, { create: false });
     } catch (error) {
-      if (error.name === "NotFoundError") {
+      if (hasErrorName(error, "NotFoundError")) {
         return filename;
       }
 
@@ -197,7 +206,7 @@ async function nextAvailableFilename(directoryHandle, preferredFilename) {
   throw new Error("Could not find an available filename.");
 }
 
-function downloadMarkdown(markdown, filename) {
+function downloadMarkdown(markdown: string, filename: string): void {
   const blob = new Blob([markdown.endsWith("\n") ? markdown : `${markdown}\n`], {
     type: "text/markdown;charset=utf-8"
   });
@@ -210,7 +219,7 @@ function downloadMarkdown(markdown, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function buildRoleFilename(markdown) {
+function buildRoleFilename(markdown: string): string {
   const company = extractMarkdownSection(markdown, "Company");
   const role = extractMarkdownSection(markdown, "Role");
   const slug = slugify([company, role].filter(Boolean).join("-"));
@@ -218,14 +227,14 @@ function buildRoleFilename(markdown) {
   return `${slug || "job-role"}.md`;
 }
 
-function extractMarkdownSection(markdown, heading) {
+function extractMarkdownSection(markdown: string, heading: string): string {
   const pattern = new RegExp(`^# ${escapeRegExp(heading)}\\n([\\s\\S]*?)(?=\\n# |$)`, "m");
   const match = markdown.match(pattern);
 
   return match?.[1]?.trim() || "";
 }
 
-function slugify(value) {
+function slugify(value: string): string {
   return value
     .toLowerCase()
     .normalize("NFKD")
@@ -235,6 +244,29 @@ function slugify(value) {
     .slice(0, 120);
 }
 
-function escapeRegExp(value) {
+function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function queryRequiredElement<T extends Element>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+
+  if (!element) {
+    throw new Error(`Required element not found: ${selector}`);
+  }
+
+  return element;
+}
+
+function hasErrorName(error: unknown, name: string): boolean {
+  return error instanceof DOMException
+    ? error.name === name
+    : typeof error === "object" &&
+        error !== null &&
+        "name" in error &&
+        error.name === name;
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
