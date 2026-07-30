@@ -48,6 +48,18 @@
         description: getNotYetUnicornsJobDescription
       },
       validate: validateNotYetUnicornsJob
+    },
+    {
+      source: "ashby",
+      urlPattern: /^https:\/\/jobs\.ashbyhq\.com\/[^/?#]+\/[0-9a-f-]+\/?(?:[?#].*)?$/i,
+      fields: {
+        title: getAshbyJobTitle,
+        company: getAshbyCompanyName,
+        website: getAshbyCompanyWebsite,
+        salary: getAshbySalary,
+        description: getAshbyJobDescription
+      },
+      validate: validateAshbyJob
     }
   ];
 
@@ -110,6 +122,16 @@
 
     if (!job.description) {
       throw new Error("Not Yet Unicorns page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
+    }
+  }
+
+  function validateAshbyJob(job) {
+    if (!job.title && !job.company && !job.description) {
+      throw new Error("Ashby page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
+    }
+
+    if (!job.description) {
+      throw new Error("Ashby page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
     }
   }
 
@@ -483,6 +505,71 @@
     );
   }
 
+  function getAshbyJobTitle() {
+    return (
+      textFromFirst([
+        "[data-testid='job-title']",
+        "main h1",
+        "[role='main'] h1",
+        "h1"
+      ]) || parseAshbyTitleFromDocument()
+    );
+  }
+
+  function getAshbyCompanyName() {
+    return (
+      parseAshbyCompanyFromDocument() ||
+      textFromFirst([
+        "[data-testid='company-name']",
+        "header a[href='/']",
+        "header a[href^='/']",
+        "main a[href='/']"
+      ]) ||
+      titleCaseSlug(parseAshbyJobBoardSlug())
+    );
+  }
+
+  function getAshbyCompanyWebsite() {
+    return (
+      hrefFromFirst([
+        "a[aria-label*='website' i][href^='http']",
+        "a[href^='http']"
+      ], isExternalWebsiteHref) || ""
+    );
+  }
+
+  function getAshbySalary() {
+    const compensationText = textNearHeading(/compensation|salary|pay range/i);
+
+    return normalizeSalary(
+      firstSalaryMatch(compensationText) ||
+      firstSalaryMatch(cleanText(document.body?.innerText || ""))
+    );
+  }
+
+  function getAshbyJobDescription() {
+    const descriptionRoot = bestTextElement([
+      "[data-testid='job-description']",
+      "[data-testid='posting-description']",
+      "[class*='JobDescription']",
+      "[class*='jobDescription']",
+      "[class*='description']"
+    ]);
+    const directDescription = cleanText(descriptionRoot?.innerText || descriptionRoot?.textContent || "");
+
+    if (directDescription) {
+      return stripAshbyBoilerplate(directDescription);
+    }
+
+    const pageText = cleanText(
+      firstVisibleElement(["main", "[role='main']", "article"])?.innerText ||
+      document.body?.innerText ||
+      ""
+    );
+
+    return stripAshbyBoilerplate(extractAshbyDescription(pageText) || pageText);
+  }
+
   function textFromFirst(selectors) {
     const element = firstVisibleElement(selectors);
     return cleanText(element?.innerText || element?.textContent || "");
@@ -605,6 +692,20 @@
     return cleanText(match?.[1] || "");
   }
 
+  function parseAshbyTitleFromDocument() {
+    const title = document.title.split("@")[0]?.trim() || document.title;
+    return cleanText(title.replace(/\s+\|\s+.+$/i, ""));
+  }
+
+  function parseAshbyCompanyFromDocument() {
+    const atMatch = document.title.match(/@\s*([^|]+?)(?:\s*\||$)/);
+    return cleanText(atMatch?.[1] || "");
+  }
+
+  function parseAshbyJobBoardSlug() {
+    return cleanText(new URL(window.location.href).pathname.split("/").filter(Boolean)[0] || "");
+  }
+
   function parseBigRemoteJobMetaField(label) {
     const description = cleanText(
       document.querySelector("meta[property='og:description']")?.content ||
@@ -669,6 +770,17 @@
     );
   }
 
+  function stripAshbyBoilerplate(text) {
+    return cleanText(
+      text
+        .replace(/^\s*overview\s*/i, "")
+        .replace(/^\s*application\s*/i, "")
+        .replace(/\n?application\s*$/i, "")
+        .replace(/\n?apply for this job[\s\S]*$/i, "")
+        .replace(/\n?apply for this job\s*$/i, "")
+    );
+  }
+
   function extractWellfoundDescription(text) {
     return (
       extractTextBetween(text, /about the job/i, wellfoundDescriptionEndPatterns()) ||
@@ -689,6 +801,14 @@
     return (
       extractTextBetween(text, /about us|job description|the role/i, notYetUnicornsDescriptionEndPatterns()) ||
       ""
+    );
+  }
+
+  function extractAshbyDescription(text) {
+    return (
+      extractTextBetween(text, /^overview$/i, ashbyDescriptionEndPatterns()) ||
+      extractTextBetween(text, /^(about|about us|the role|job description)$/i, ashbyDescriptionEndPatterns()) ||
+      extractTextAfterAshbyMetadata(text)
     );
   }
 
@@ -745,6 +865,68 @@
       /^tech stack$/i,
       /^industry$/i
     ];
+  }
+
+  function ashbyDescriptionEndPatterns() {
+    return [
+      /^application$/i,
+      /^apply for this job$/i,
+      /^submit application$/i
+    ];
+  }
+
+  function extractTextAfterAshbyMetadata(text) {
+    const lines = String(text || "")
+      .split("\n")
+      .map((line) => cleanText(line))
+      .filter(Boolean);
+
+    const metadataLabels = [/^location$/i, /^employment type$/i, /^location type$/i, /^department$/i, /^team$/i];
+    let startIndex = lines.findIndex((line) => line === getAshbyJobTitle()) + 1;
+
+    if (startIndex === 0) {
+      startIndex = 0;
+    }
+
+    while (startIndex < lines.length) {
+      const line = lines[startIndex];
+
+      if (/^overview$/i.test(line)) {
+        startIndex += 1;
+        break;
+      }
+
+      if (metadataLabels.some((pattern) => pattern.test(line))) {
+        startIndex += 2;
+        continue;
+      }
+
+      break;
+    }
+
+    if (startIndex >= lines.length) {
+      return "";
+    }
+
+    let endIndex = lines.length;
+    for (let index = startIndex + 1; index < lines.length; index += 1) {
+      if (ashbyDescriptionEndPatterns().some((pattern) => pattern.test(lines[index]))) {
+        endIndex = index;
+        break;
+      }
+    }
+
+    return cleanText(lines.slice(startIndex, endIndex).join("\n"));
+  }
+
+  function textNearHeading(pattern) {
+    const heading = findHeadingElement(pattern);
+
+    if (!heading) {
+      return "";
+    }
+
+    return cleanText(`${heading.innerText || heading.textContent || ""}\n${collectSectionText(heading)}`);
   }
 
   function getNotYetUnicornsNextData() {
@@ -848,8 +1030,16 @@
     return Boolean(
       href &&
       /^https?:\/\//.test(href) &&
-      !/linkedin\.com|wellfound\.com|bigremotejob\.com|notyetunicorns\.com/.test(href)
+      !/linkedin\.com|wellfound\.com|bigremotejob\.com|notyetunicorns\.com|ashbyhq\.com/.test(href)
     );
+  }
+
+  function titleCaseSlug(value) {
+    return cleanText(value)
+      .split(/[-_\s]+/)
+      .filter(Boolean)
+      .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+      .join(" ");
   }
 
   function distanceToElement(first, second) {

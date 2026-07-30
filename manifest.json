@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Orionis Capture",
-  "description": "Capture LinkedIn, Wellfound, BigRemoteJob, and Not Yet Unicorns job posts as structured Markdown.",
+  "description": "Capture LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, and Ashby job posts as structured Markdown.",
   "version": "0.1.0",
   "permissions": ["activeTab", "clipboardWrite", "sidePanel", "scripting"],
   "host_permissions": [
     "https://www.linkedin.com/jobs/*",
     "https://wellfound.com/jobs*",
     "https://bigremotejob.com/remote-jobs/*",
-    "https://notyetunicorns.com/job/*"
+    "https://notyetunicorns.com/job/*",
+    "https://jobs.ashbyhq.com/*/*"
   ],
   "icons": {
     "16": "assets/icon-16.png",
@@ -34,7 +35,8 @@
         "https://www.linkedin.com/jobs/*",
         "https://wellfound.com/jobs*",
         "https://bigremotejob.com/remote-jobs/*",
-        "https://notyetunicorns.com/job/*"
+        "https://notyetunicorns.com/job/*",
+        "https://jobs.ashbyhq.com/*/*"
       ],
       "js": ["src/content-script.js"]
     }
