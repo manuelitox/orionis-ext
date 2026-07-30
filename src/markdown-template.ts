@@ -1,4 +1,6 @@
-export function buildOrionisMarkdown(job) {
+import type { CapturedJob } from "./types.js";
+
+export function buildOrionisMarkdown(job: CapturedJob): string {
   const company = normalizeField(job.company);
   const role = normalizeField(job.title);
   const website = normalizeField(job.website);
@@ -33,18 +35,18 @@ ${jd}
 `;
 }
 
-function normalizeField(value) {
+function normalizeField(value: unknown): string {
   return String(value || "").trim();
 }
 
-function normalizeBody(value) {
+function normalizeBody(value: unknown): string {
   return String(value || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-function joinJdParts(salary, description) {
+function joinJdParts(salary: string, description: string): string {
   const salaryLine = salary ? `Salary: ${salary}` : "";
   return [salaryLine, description].filter(Boolean).join("\n\n");
 }

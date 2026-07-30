@@ -1,6 +1,9 @@
+import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-script.types.js";
+
 (() => {
   const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
-  const JOB_SOURCES = [
+
+  const JOB_SOURCES: JobSource[] = [
     {
       source: "linkedIn",
       urlPattern: /^https:\/\/www\.linkedin\.com\/jobs\//,
@@ -91,7 +94,7 @@
     return job;
   }
 
-  function buildJob(jobSource) {
+  function buildJob(jobSource: JobSource): CapturedJob {
     return {
       ...buildCaptureMetadata(jobSource.source),
       ...extractJobFields(jobSource.fields),
@@ -99,13 +102,13 @@
     };
   }
 
-  function extractJobFields(fields) {
+  function extractJobFields(fields: JobSource["fields"]): ExtractedJobFields {
     return Object.fromEntries(
       Object.entries(fields).map(([name, getValue]) => [name, getValue()])
-    );
+    ) as ExtractedJobFields;
   }
 
-  function validateBigRemoteJob(job) {
+  function validateBigRemoteJob(job: CapturedJob): void {
     if (!job.title && !job.company && !job.description) {
       throw new Error("BigRemoteJob page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
     }
@@ -115,7 +118,7 @@
     }
   }
 
-  function validateNotYetUnicornsJob(job) {
+  function validateNotYetUnicornsJob(job: CapturedJob): void {
     if (!job.title && !job.company && !job.description) {
       throw new Error("Not Yet Unicorns page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
     }
@@ -125,7 +128,7 @@
     }
   }
 
-  function validateAshbyJob(job) {
+  function validateAshbyJob(job: CapturedJob): void {
     if (!job.title && !job.company && !job.description) {
       throw new Error("Ashby page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
     }
@@ -135,14 +138,14 @@
     }
   }
 
-  function buildCaptureMetadata(source) {
+  function buildCaptureMetadata(source: string): Pick<CapturedJob, "source" | "captured_at"> {
     return {
       source,
       captured_at: new Date().toISOString()
     };
   }
 
-  function findJobSource(url) {
+  function findJobSource(url: string): JobSource | undefined {
     return JOB_SOURCES.find((jobSource) => jobSource.urlPattern.test(url || ""));
   }
 
@@ -213,7 +216,7 @@
     ]);
 
     const expandButton = Array.from(
-      document.querySelectorAll("button, [role='button']")
+      document.querySelectorAll<HTMLElement>("button, [role='button']")
     ).find((element) => {
       if (!isVisible(element)) {
         return false;
@@ -258,7 +261,7 @@
   }
 
   function getWellfoundCompanyWebsite() {
-    const websiteLink = Array.from(document.querySelectorAll("a[href]")).find((element) => {
+    const websiteLink = Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href]")).find((element) => {
       if (!isVisible(element)) {
         return false;
       }
@@ -331,7 +334,7 @@
   async function expandWellfoundJobDescription() {
     const aboutHeading = findHeadingElement(/about the job/i);
     const expandButton = Array.from(
-      document.querySelectorAll("button, [role='button']")
+      document.querySelectorAll<HTMLElement>("button, [role='button']")
     ).find((element) => {
       if (!isVisible(element)) {
         return false;
@@ -410,14 +413,14 @@
     );
   }
 
-  function bigRemoteJobDescriptionElement() {
+  function bigRemoteJobDescriptionElement(): HTMLElement | null {
     const directElement = firstVisibleElement([".bde-rich-text-50-105"]);
 
     if (directElement) {
       return directElement;
     }
 
-    return Array.from(document.querySelectorAll(".breakdance-rich-text-styles, [class*='rich-text']"))
+    return Array.from(document.querySelectorAll<HTMLElement>(".breakdance-rich-text-styles, [class*='rich-text']"))
       .filter(isVisible)
       .map((element) => ({ element, text: cleanText(element.innerText || element.textContent || "") }))
       .filter((candidate) => /who we are|your team and role|about you|compensation|hiring process/i.test(candidate.text))
@@ -570,14 +573,14 @@
     return stripAshbyBoilerplate(extractAshbyDescription(pageText) || pageText);
   }
 
-  function textFromFirst(selectors) {
+  function textFromFirst(selectors: string[]): string {
     const element = firstVisibleElement(selectors);
     return cleanText(element?.innerText || element?.textContent || "");
   }
 
-  function hrefFromFirst(selectors, predicate = () => true) {
+  function hrefFromFirst(selectors: string[], predicate: (href: string) => boolean = () => true): string {
     for (const selector of selectors) {
-      const elements = Array.from(document.querySelectorAll(selector));
+      const elements = Array.from(document.querySelectorAll<HTMLAnchorElement>(selector));
       const visible = elements.find((element) => isVisible(element) && predicate(element.href || ""));
       if (visible?.href) {
         return visible.href;
@@ -587,9 +590,9 @@
     return "";
   }
 
-  function firstVisibleElement(selectors) {
+  function firstVisibleElement(selectors: string[]): HTMLElement | null {
     for (const selector of selectors) {
-      const elements = Array.from(document.querySelectorAll(selector));
+      const elements = Array.from(document.querySelectorAll<HTMLElement>(selector));
       const visible = elements.find(isVisible);
       if (visible) {
         return visible;
@@ -599,9 +602,9 @@
     return null;
   }
 
-  function bestTextElement(selectors) {
+  function bestTextElement(selectors: string[]): HTMLElement | null {
     const candidates = selectors.flatMap((selector) =>
-      Array.from(document.querySelectorAll(selector)).filter(isVisible)
+      Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(isVisible)
     );
 
     return candidates
@@ -611,7 +614,7 @@
       ?.element || null;
   }
 
-  function scoreDescriptionCandidate(candidate) {
+  function scoreDescriptionCandidate(candidate: { text: string }): number {
     const text = candidate.text.toLowerCase();
     let score = candidate.text.length;
 
@@ -630,7 +633,7 @@
     return score;
   }
 
-  function isVisible(element) {
+  function isVisible(element: Element): boolean {
     const style = window.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
 
@@ -708,8 +711,8 @@
 
   function parseBigRemoteJobMetaField(label) {
     const description = cleanText(
-      document.querySelector("meta[property='og:description']")?.content ||
-      document.querySelector("meta[name='description']")?.content ||
+      document.querySelector<HTMLMetaElement>("meta[property='og:description']")?.content ||
+      document.querySelector<HTMLMetaElement>("meta[name='description']")?.content ||
       ""
     );
     const pattern = new RegExp(`${escapeRegExp(label)}:\\s*([^🪛🌎💸🚀🔥]+)`, "i");
@@ -718,14 +721,14 @@
     return cleanText(match?.[1] || "");
   }
 
-  function findHeadingElement(pattern) {
+  function findHeadingElement(pattern: RegExp): HTMLElement | undefined {
     return Array.from(
-      document.querySelectorAll("h1, h2, h3, h4, [role='heading']")
+      document.querySelectorAll<HTMLElement>("h1, h2, h3, h4, [role='heading']")
     ).find((element) => isVisible(element) && pattern.test(cleanText(element.innerText)));
   }
 
-  function collectSectionText(heading) {
-    const chunks = [];
+  function collectSectionText(heading: Element): string {
+    const chunks: string[] = [];
     let current = heading.nextElementSibling;
 
     while (current) {
@@ -733,7 +736,7 @@
         break;
       }
 
-      const text = cleanText(current.innerText || current.textContent || "");
+      const text = cleanText((current as HTMLElement).innerText || current.textContent || "");
       if (text) {
         chunks.push(text);
       }
