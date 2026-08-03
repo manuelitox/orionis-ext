@@ -36,8 +36,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
         website: getBigRemoteJobCompanyWebsite,
         salary: getBigRemoteJobSalary,
         description: getBigRemoteJobDescription
-      },
-      validate: validateBigRemoteJob
+      }
     },
     {
       source: "notYetUnicorns",
@@ -48,8 +47,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
         website: getNotYetUnicornsCompanyWebsite,
         salary: getNotYetUnicornsSalary,
         description: getNotYetUnicornsJobDescription
-      },
-      validate: validateNotYetUnicornsJob
+      }
     },
     {
       source: "ashby",
@@ -60,8 +58,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
         website: getAshbyCompanyWebsite,
         salary: getAshbySalary,
         description: getAshbyJobDescription
-      },
-      validate: validateAshbyJob
+      }
     }
   ];
 
@@ -90,7 +87,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
     const job = buildJob(jobSource);
 
-    jobSource.validate?.(job);
+    validateCapturedJobContract(job);
 
     return job;
   }
@@ -109,34 +106,79 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     ) as ExtractedJobFields;
   }
 
-  export function validateBigRemoteJob(job: CapturedJob): void {
+  export function validateCapturedJobContract(job: CapturedJob): void {
     if (!job.title && !job.company && !job.description) {
-      throw new Error("BigRemoteJob page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
+      throw new Error(captureReadinessMessage(job, "no_fields"));
+    }
+
+    if (!job.title) {
+      throw new Error(captureReadinessMessage(job, "missing_title"));
     }
 
     if (!job.description) {
-      throw new Error("BigRemoteJob page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
+      throw new Error(captureReadinessMessage(job, "missing_description"));
     }
+
+    if (!job.company) {
+      throw new Error(captureReadinessMessage(job, "missing_company"));
+    }
+  }
+
+  export function validateBigRemoteJob(job: CapturedJob): void {
+    validateCapturedJobContract(job);
   }
 
   export function validateNotYetUnicornsJob(job: CapturedJob): void {
-    if (!job.title && !job.company && !job.description) {
-      throw new Error("Not Yet Unicorns page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
-    }
-
-    if (!job.description) {
-      throw new Error("Not Yet Unicorns page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
-    }
+    validateCapturedJobContract(job);
   }
 
   export function validateAshbyJob(job: CapturedJob): void {
-    if (!job.title && !job.company && !job.description) {
-      throw new Error("Ashby page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
+    validateCapturedJobContract(job);
+  }
+
+  type ContractFailureReason = "no_fields" | "missing_title" | "missing_company" | "missing_description";
+
+  function captureReadinessMessage(job: CapturedJob, reason: ContractFailureReason): string {
+    const sourceName = jobSourceLabel(job.source);
+    const sourcePrefix = `${sourceName} page detected, but`;
+
+    if (isKnownListPage(job)) {
+      return `${sourceName} jobs list detected. Open a specific job detail page before capturing.`;
     }
 
-    if (!job.description) {
-      throw new Error("Ashby page detected, but the JD body was empty. Refresh the job page, then click Refresh in Orionis Capture.");
+    if (reason === "no_fields") {
+      return `${sourcePrefix} no job fields were found. Open a specific job detail page, wait for it to finish loading, then click Refresh in Orionis Capture.`;
     }
+
+    if (reason === "missing_title") {
+      return `${sourcePrefix} the role title was not found. Open the job detail page and wait for the full posting to load before capturing.`;
+    }
+
+    if (reason === "missing_company") {
+      return `${sourcePrefix} the company name was not found. Open the job detail page and wait for the full posting to load before capturing.`;
+    }
+
+    return `${sourcePrefix} the JD body was empty. Expand the full description if needed, wait for the page to finish loading, then click Refresh in Orionis Capture.`;
+  }
+
+  function isKnownListPage(job: CapturedJob): boolean {
+    try {
+      return job.source === "linkedIn" && /\/jobs\/(?:search|collections|recommended)\b/i.test(new URL(job.url).pathname);
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function jobSourceLabel(source: string): string {
+    const labels: Record<string, string> = {
+      ashby: "Ashby",
+      bigRemoteJob: "BigRemoteJob",
+      linkedIn: "LinkedIn",
+      notYetUnicorns: "Not Yet Unicorns",
+      wellfound: "Wellfound"
+    };
+
+    return labels[source] || "Job";
   }
 
   export function buildCaptureMetadata(source: string): Pick<CapturedJob, "source" | "captured_at"> {

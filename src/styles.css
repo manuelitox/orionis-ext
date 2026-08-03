@@ -53,6 +53,32 @@ p {
   line-height: 1.4;
 }
 
+.status {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+}
+
+.status-info {
+  background: #eef3fb;
+  border-color: #c6d7f2;
+  color: #174ea6;
+}
+
+.status-success {
+  background: #edf7f2;
+  border-color: #b8dfca;
+  color: #146c43;
+}
+
+.status-error {
+  background: #fceeee;
+  border-color: #f2b8b5;
+  color: #b3261e;
+  font-weight: 650;
+}
+
 .actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -41,6 +41,7 @@ import {
   titleCaseSlug,
   validateAshbyJob,
   validateBigRemoteJob,
+  validateCapturedJobContract,
   validateNotYetUnicornsJob,
   wellfoundDescriptionEndPatterns
 } from "../src/content-script.js";
@@ -203,18 +204,18 @@ Apply for this job`)).toBe("Build product reliability.");
     expect(click).toHaveBeenCalledOnce();
   });
 
-  it("validates required fields for strict sources", () => {
-    expect(() => validateBigRemoteJob(job({ title: "", company: "", description: "" }))).toThrow("no job fields were found");
-    expect(() => validateBigRemoteJob(job({ title: "Role", description: "" }))).toThrow("JD body was empty");
-    expect(() => validateBigRemoteJob(job({ title: "Role", description: "Build." }))).not.toThrow();
+  it("validates the required capture contract", () => {
+    expect(() => validateCapturedJobContract(job({ title: "", company: "", description: "" }))).toThrow("no job fields were found");
+    expect(() => validateCapturedJobContract(job({ title: "", company: "Co", description: "Build." }))).toThrow("role title was not found");
+    expect(() => validateCapturedJobContract(job({ title: "Role", company: "", description: "Build." }))).toThrow("company name was not found");
+    expect(() => validateCapturedJobContract(job({ title: "Role", company: "Co", description: "" }))).toThrow("JD body was empty");
+    expect(() => validateCapturedJobContract(job({ title: "Role", company: "Co", description: "Build." }))).not.toThrow();
+  });
 
-    expect(() => validateNotYetUnicornsJob(job({ title: "", company: "", description: "" }))).toThrow("no job fields were found");
-    expect(() => validateNotYetUnicornsJob(job({ company: "Co", description: "" }))).toThrow("JD body was empty");
-    expect(() => validateNotYetUnicornsJob(job({ company: "Co", description: "Build." }))).not.toThrow();
-
-    expect(() => validateAshbyJob(job({ title: "", company: "", description: "" }))).toThrow("no job fields were found");
-    expect(() => validateAshbyJob(job({ title: "Role", description: "" }))).toThrow("JD body was empty");
-    expect(() => validateAshbyJob(job({ title: "Role", description: "Build." }))).not.toThrow();
+  it("keeps legacy source validators on the shared capture contract", () => {
+    expect(() => validateBigRemoteJob(job({ title: "Role", company: "Co", description: "Build." }))).not.toThrow();
+    expect(() => validateNotYetUnicornsJob(job({ title: "Role", company: "Co", description: "Build." }))).not.toThrow();
+    expect(() => validateAshbyJob(job({ title: "Role", company: "Co", description: "Build." }))).not.toThrow();
   });
 });
 

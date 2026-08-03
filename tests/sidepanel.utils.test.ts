@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRoleFilename, extractMarkdownSection, isSupportedJobUrl } from "../src/sidepanel.utils.js";
+import { buildRoleFilename, extractMarkdownSection, isSupportedJobUrl, unsupportedJobPageMessage } from "../src/sidepanel.utils.js";
 
 describe("isSupportedJobUrl", () => {
   it("accepts supported job page URLs", () => {
@@ -15,6 +15,20 @@ describe("isSupportedJobUrl", () => {
     expect(isSupportedJobUrl("https://www.linkedin.com/company/acme")).toBe(false);
     expect(isSupportedJobUrl("https://wellfound.com/company/acme")).toBe(false);
     expect(isSupportedJobUrl("https://jobs.ashbyhq.com/acme/not-a-uuid")).toBe(false);
+  });
+});
+
+describe("unsupportedJobPageMessage", () => {
+  it("returns source-specific guidance for known non-job pages", () => {
+    expect(unsupportedJobPageMessage("https://www.linkedin.com/feed/")).toBe("This LinkedIn page is not a job post. Open a specific LinkedIn job detail page before capturing.");
+    expect(unsupportedJobPageMessage("https://wellfound.com/company/acme")).toBe("This Wellfound page is not a job post. Open a specific Wellfound job detail page before capturing.");
+    expect(unsupportedJobPageMessage("https://bigremotejob.com/")).toBe("This BigRemoteJob page is not a job post. Open a specific BigRemoteJob job detail page before capturing.");
+    expect(unsupportedJobPageMessage("https://notyetunicorns.com/")).toBe("This Not Yet Unicorns page is not a job post. Open a specific Not Yet Unicorns job detail page before capturing.");
+    expect(unsupportedJobPageMessage("https://jobs.ashbyhq.com/acme/not-a-uuid")).toBe("This Ashby page is not a valid job post. Open a specific Ashby job detail page before capturing.");
+  });
+
+  it("falls back to generic guidance for unknown pages", () => {
+    expect(unsupportedJobPageMessage("https://example.com/jobs/123")).toBe("Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, or Ashby job page before capturing.");
   });
 });
 

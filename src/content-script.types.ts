@@ -17,5 +17,4 @@ export type JobSource = {
   urlPattern: RegExp;
   fields: Record<keyof ExtractedJobFields, () => string>;
   beforeExtract?: () => Promise<void>;
-  validate?: (job: CapturedJob) => void;
 };
