@@ -76,6 +76,30 @@ Brave:
 4. Select the generated `dist` directory.
 5. Open a supported job post and click the extension action.
 
+## Development
+
+Use Node 22 or newer. If you use `nvm`, run:
+
+```sh
+nvm use
+```
+
+Run the full verification suite before release-oriented changes:
+
+```sh
+npm test
+```
+
+This runs unit/jsdom tests with coverage thresholds, builds the extension, and runs Playwright smoke tests in Chromium for each supported job source.
+
+For faster local feedback:
+
+```sh
+npm run test:unit
+npm run test:unit:watch
+npm run test:e2e
+```
+
 ## Privacy
 
 Orionis Capture is local-first:
