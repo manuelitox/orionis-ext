@@ -8,12 +8,15 @@
   },
   "scripts": {
     "build": "tsc --noEmit && node scripts/build.mjs",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
+    "test": "npm run test:unit:coverage && npm run test:e2e",
+    "test:e2e": "npm run build && playwright test",
+    "test:unit": "vitest run",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:unit:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/chrome": "^0.0.287",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^24.1.3",
