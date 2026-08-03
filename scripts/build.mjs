@@ -54,6 +54,7 @@ await build({
 
 await Promise.all([
   cp(resolve(root, "manifest.json"), resolve(distDir, "manifest.json")),
+  cp(resolve(root, "_locales"), resolve(distDir, "_locales"), { recursive: true }),
   cp(resolve(root, "assets"), resolve(distDir, "assets"), { recursive: true }),
   cp(resolve(root, "src/sidepanel.html"), resolve(distDir, "src/sidepanel.html")),
   cp(resolve(root, "src/styles.css"), resolve(distDir, "src/styles.css"))

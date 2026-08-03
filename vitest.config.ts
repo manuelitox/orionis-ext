@@ -11,8 +11,10 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       exclude: [
         "src/**/*.d.ts",
+        "src/**/*.types.ts",
         "src/background.ts",
-        "src/sidepanel.ts"
+        "src/sidepanel.ts",
+        "src/types.ts"
       ],
       thresholds: {
         statements: 90,

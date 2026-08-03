@@ -222,6 +222,43 @@ for (const captureCase of captureCases) {
   });
 }
 
+test("re-translates side panel UI when the language setting changes", async () => {
+  const extensionPath = resolve("dist");
+  const userDataDir = await mkdtemp(join(tmpdir(), "orionis-ext-e2e-"));
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    channel: "chromium",
+    headless: true,
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`
+    ]
+  });
+
+  try {
+    const extensionId = await getExtensionId(context);
+    const panelPage = await context.newPage();
+    await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html`);
+
+    await expect(panelPage.locator("#copy")).toContainText("Copy");
+    await expect(panelPage.locator("#settings-popover")).toBeHidden();
+    await panelPage.locator("#settings").click();
+    await expect(panelPage.locator("#language-label")).toHaveText("Language");
+
+    await panelPage.locator("#language").selectOption("es");
+
+    await expect(panelPage.locator("#copy")).toContainText("Copiar");
+    await expect(panelPage.locator("#save")).toContainText("Guardar");
+    await expect(panelPage.locator("#settings")).toHaveAttribute("aria-label", "Abrir ajustes");
+    await expect(panelPage.locator("#language-label")).toHaveText("Idioma");
+    await expect(panelPage.locator("#markdown")).toHaveAttribute(
+      "placeholder",
+      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns o Ashby y actualiza para generar Markdown estructurado."
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 async function getExtensionId(context: BrowserContext): Promise<string> {
   let [background] = context.serviceWorkers();
   background ||= await context.waitForEvent("serviceworker");

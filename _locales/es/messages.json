@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "Orionis Capture"
+  },
+  "extensionDescription": {
+    "message": "Captura ofertas de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns y Ashby como Markdown estructurado."
+  },
+  "actionDefaultTitle": {
+    "message": "Capturar oferta como Markdown"
+  }
+}
