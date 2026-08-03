@@ -36,6 +36,20 @@ describe("extractJob", () => {
     expect(job.captured_at).toEqual(expect.any(String));
   });
 
+  it("rejects a LinkedIn jobs page when the job contract is incomplete", async () => {
+    setPage("https://www.linkedin.com/jobs/search/?keywords=engineer", `
+      <main>
+        <h1>Jobs based on your profile</h1>
+        <ul>
+          <li>Frontend Engineer at Acme</li>
+          <li>Backend Engineer at Example Co</li>
+        </ul>
+      </main>
+    `, "LinkedIn Jobs Search");
+
+    await expect(extractJob()).rejects.toThrow("LinkedIn jobs list detected. Open a specific job detail page before capturing.");
+  });
+
   it("extracts a Wellfound job page", async () => {
     setPage("https://wellfound.com/jobs/456", `
       <main>

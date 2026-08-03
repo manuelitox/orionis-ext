@@ -1,5 +1,5 @@
 import { buildOrionisMarkdown } from "./markdown.template.js";
-import { buildRoleFilename, isSupportedJobUrl } from "./sidepanel.utils.js";
+import { buildRoleFilename, isSupportedJobUrl, unsupportedJobPageMessage } from "./sidepanel.utils.js";
 import type { CapturedJob, ExtractJobMessage, ExtractJobResponse } from "./types.js";
 
 const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
@@ -26,14 +26,14 @@ async function captureCurrentTab(): Promise<void> {
     const tab = await getActiveTab();
 
     if (!tab?.id || !isSupportedJobUrl(tab.url)) {
-      throw new Error("Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, or Ashby job page before capturing.");
+      throw new Error(unsupportedJobPageMessage(tab?.url));
     }
 
     const job = await requestJobData(tab.id);
     markdownEditor.value = buildOrionisMarkdown(job);
-    setStatus("Markdown ready. Review, copy, or save it.");
+    setStatus("Markdown ready. Review, copy, or save it.", "success");
   } catch (error) {
-    setStatus(errorMessage(error, "Could not capture this page."));
+    setStatus(errorMessage(error, "Could not capture this page."), "error");
   } finally {
     refreshButton.disabled = false;
   }
@@ -42,11 +42,11 @@ async function captureCurrentTab(): Promise<void> {
 async function copyMarkdown(): Promise<void> {
   try {
     await navigator.clipboard.writeText(markdownEditor.value);
-    setStatus("Markdown copied.");
+    setStatus("Markdown copied.", "success");
   } catch (_error) {
     markdownEditor.select();
     document.execCommand("copy");
-    setStatus("Markdown copied.");
+    setStatus("Markdown copied.", "success");
   }
 }
 
@@ -54,7 +54,7 @@ async function saveRole(): Promise<void> {
   const markdown = markdownEditor.value.trim();
 
   if (!markdown) {
-    setStatus("Nothing to save yet.");
+    setStatus("Nothing to save yet.", "error");
     return;
   }
 
@@ -63,7 +63,7 @@ async function saveRole(): Promise<void> {
   try {
     if (!supportsDirectoryPicker()) {
       downloadMarkdown(markdown, filename);
-      setStatus(`Saved ${filename} as a download.`);
+      setStatus(`Saved ${filename} as a download.`, "success");
       return;
     }
 
@@ -76,7 +76,7 @@ async function saveRole(): Promise<void> {
 
     await ensureDirectoryPermission(rolesDirectoryHandle);
     const savedFilename = await writeUniqueFile(rolesDirectoryHandle, filename, markdown);
-    setStatus(`Saved ${savedFilename}.`);
+    setStatus(`Saved ${savedFilename}.`, "success");
   } catch (error) {
     if (hasErrorName(error, "AbortError")) {
       setStatus("Save cancelled.");
@@ -85,7 +85,7 @@ async function saveRole(): Promise<void> {
 
     rolesDirectoryHandle = null;
     downloadMarkdown(markdown, filename);
-    setStatus(`Could not write to folder, saved ${filename} as a download instead.`);
+    setStatus(`Could not write to folder, saved ${filename} as a download instead.`, "error");
   } finally {
     saveButton.disabled = false;
   }
@@ -120,8 +120,11 @@ async function sendExtractMessage(tabId: number): Promise<CapturedJob> {
   return response.job;
 }
 
-function setStatus(message: string): void {
+type StatusTone = "info" | "success" | "error";
+
+function setStatus(message: string, tone: StatusTone = "info"): void {
   statusText.textContent = message;
+  statusText.className = `status status-${tone}`;
 }
 
 function supportsDirectoryPicker(): boolean {
