@@ -1,6 +1,5 @@
 import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-script.types.js";
 
-(() => {
   const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
 
   const JOB_SOURCES: JobSource[] = [
@@ -66,7 +65,8 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     }
   ];
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type !== MESSAGE_TYPE) {
       return false;
     }
@@ -77,8 +77,9 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
     return true;
   });
+  }
 
-  async function extractJob() {
+  export async function extractJob() {
     const jobSource = findJobSource(window.location.href);
 
     if (!jobSource) {
@@ -108,7 +109,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     ) as ExtractedJobFields;
   }
 
-  function validateBigRemoteJob(job: CapturedJob): void {
+  export function validateBigRemoteJob(job: CapturedJob): void {
     if (!job.title && !job.company && !job.description) {
       throw new Error("BigRemoteJob page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
     }
@@ -118,7 +119,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     }
   }
 
-  function validateNotYetUnicornsJob(job: CapturedJob): void {
+  export function validateNotYetUnicornsJob(job: CapturedJob): void {
     if (!job.title && !job.company && !job.description) {
       throw new Error("Not Yet Unicorns page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
     }
@@ -128,7 +129,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     }
   }
 
-  function validateAshbyJob(job: CapturedJob): void {
+  export function validateAshbyJob(job: CapturedJob): void {
     if (!job.title && !job.company && !job.description) {
       throw new Error("Ashby page detected, but no job fields were found. Reload the unpacked extension in Brave and refresh this job page.");
     }
@@ -138,14 +139,14 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     }
   }
 
-  function buildCaptureMetadata(source: string): Pick<CapturedJob, "source" | "captured_at"> {
+  export function buildCaptureMetadata(source: string): Pick<CapturedJob, "source" | "captured_at"> {
     return {
       source,
       captured_at: new Date().toISOString()
     };
   }
 
-  function findJobSource(url: string): JobSource | undefined {
+  export function findJobSource(url: string): JobSource | undefined {
     return JOB_SOURCES.find((jobSource) => jobSource.urlPattern.test(url || ""));
   }
 
@@ -206,7 +207,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return normalizeSalary(firstSalaryMatch(pageText));
   }
 
-  async function expandLinkedInJobDescription() {
+  export async function expandLinkedInJobDescription() {
     const descriptionRoot = firstVisibleElement([
       "[componentkey^='JobDetails_AboutTheJob']",
       "[componentKey^='JobDetails_AboutTheJob']",
@@ -331,7 +332,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return stripWellfoundBoilerplate(cleanText(descriptionRoot?.innerText || ""));
   }
 
-  async function expandWellfoundJobDescription() {
+  export async function expandWellfoundJobDescription() {
     const aboutHeading = findHeadingElement(/about the job/i);
     const expandButton = Array.from(
       document.querySelectorAll<HTMLElement>("button, [role='button']")
@@ -614,7 +615,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       ?.element || null;
   }
 
-  function scoreDescriptionCandidate(candidate: { text: string }): number {
+  export function scoreDescriptionCandidate(candidate: { text: string }): number {
     const text = candidate.text.toLowerCase();
     let score = candidate.text.length;
 
@@ -645,17 +646,17 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
-  function parseTitleFromDocument() {
+  export function parseTitleFromDocument() {
     const [title] = document.title.split("|").map((part) => part.trim());
     return cleanText(title || "");
   }
 
-  function parseWellfoundTitleFromDocument() {
+  export function parseWellfoundTitleFromDocument() {
     const title = document.title.split("•")[0]?.trim() || document.title;
     return cleanText(title.replace(/\s+\|\s+Wellfound$/i, ""));
   }
 
-  function parseCompanyFromDocument() {
+  export function parseCompanyFromDocument() {
     const parts = document.title.split("|").map((part) => part.trim());
     const linkedinIndex = parts.findIndex((part) => /linkedin/i.test(part));
     const candidate = linkedinIndex > 0 ? parts[linkedinIndex - 1] : "";
@@ -663,7 +664,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return cleanText(candidate);
   }
 
-  function parseWellfoundCompanyFromDocument() {
+  export function parseWellfoundCompanyFromDocument() {
     const primaryTitle = document.title.split("•")[0]?.trim() || document.title;
     const atIndex = primaryTitle.lastIndexOf(" at ");
 
@@ -675,41 +676,41 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return cleanText(byBullet[1] || "");
   }
 
-  function parseBigRemoteJobTitleFromDocument() {
+  export function parseBigRemoteJobTitleFromDocument() {
     const title = document.title.replace(/^Remote\s+/i, "").replace(/\s+at\s+.+$/i, "");
     return cleanText(title);
   }
 
-  function parseBigRemoteJobCompanyFromDocument() {
+  export function parseBigRemoteJobCompanyFromDocument() {
     const match = document.title.match(/\s+at\s+(.+)$/i);
     return cleanText(match?.[1] || "");
   }
 
-  function parseNotYetUnicornsTitleFromDocument() {
+  export function parseNotYetUnicornsTitleFromDocument() {
     const title = document.title.split("|")[0]?.trim() || document.title;
     return cleanText(title.replace(/\s+at\s+.+$/i, ""));
   }
 
-  function parseNotYetUnicornsCompanyFromDocument() {
+  export function parseNotYetUnicornsCompanyFromDocument() {
     const match = document.title.match(/\s+at\s+(.+?)\s*(?:\||$)/i);
     return cleanText(match?.[1] || "");
   }
 
-  function parseAshbyTitleFromDocument() {
+  export function parseAshbyTitleFromDocument() {
     const title = document.title.split("@")[0]?.trim() || document.title;
     return cleanText(title.replace(/\s+\|\s+.+$/i, ""));
   }
 
-  function parseAshbyCompanyFromDocument() {
+  export function parseAshbyCompanyFromDocument() {
     const atMatch = document.title.match(/@\s*([^|]+?)(?:\s*\||$)/);
     return cleanText(atMatch?.[1] || "");
   }
 
-  function parseAshbyJobBoardSlug() {
+  export function parseAshbyJobBoardSlug() {
     return cleanText(new URL(window.location.href).pathname.split("/").filter(Boolean)[0] || "");
   }
 
-  function parseBigRemoteJobMetaField(label) {
+  export function parseBigRemoteJobMetaField(label) {
     const description = cleanText(
       document.querySelector<HTMLMetaElement>("meta[property='og:description']")?.content ||
       document.querySelector<HTMLMetaElement>("meta[name='description']")?.content ||
@@ -751,7 +752,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return /^(H1|H2|H3|H4|H5|H6)$/.test(element.tagName) || element.getAttribute("role") === "heading";
   }
 
-  function stripWellfoundBoilerplate(text) {
+  export function stripWellfoundBoilerplate(text) {
     return cleanText(
       text
         .replace(/^about the job\s*/i, "")
@@ -762,7 +763,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
-  function stripBigRemoteJobBoilerplate(text) {
+  export function stripBigRemoteJobBoilerplate(text) {
     return cleanText(
       text
         .replace(/\n?apply for this position[\s\S]*$/i, "")
@@ -773,7 +774,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
-  function stripAshbyBoilerplate(text) {
+  export function stripAshbyBoilerplate(text) {
     return cleanText(
       text
         .replace(/^\s*overview\s*/i, "")
@@ -784,7 +785,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
-  function extractWellfoundDescription(text) {
+  export function extractWellfoundDescription(text) {
     return (
       extractTextBetween(text, /about the job/i, wellfoundDescriptionEndPatterns()) ||
       extractTextBetween(text, /job description/i, wellfoundDescriptionEndPatterns()) ||
@@ -793,21 +794,21 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
-  function extractBigRemoteJobDescription(text) {
+  export function extractBigRemoteJobDescription(text) {
     return (
       extractTextBetween(text, /who we are|job description|about the role|your team and role/i, bigRemoteJobDescriptionEndPatterns()) ||
       ""
     );
   }
 
-  function extractNotYetUnicornsDescription(text) {
+  export function extractNotYetUnicornsDescription(text) {
     return (
       extractTextBetween(text, /about us|job description|the role/i, notYetUnicornsDescriptionEndPatterns()) ||
       ""
     );
   }
 
-  function extractAshbyDescription(text) {
+  export function extractAshbyDescription(text) {
     return (
       extractTextBetween(text, /^overview$/i, ashbyDescriptionEndPatterns()) ||
       extractTextBetween(text, /^(about|about us|the role|job description)$/i, ashbyDescriptionEndPatterns()) ||
@@ -815,7 +816,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
-  function extractTextBetween(text, startPattern, endPatterns) {
+  export function extractTextBetween(text, startPattern, endPatterns) {
     const lines = String(text || "")
       .split("\n")
       .map((line) => cleanText(line))
@@ -837,7 +838,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return cleanText(lines.slice(startIndex + 1, endIndex).join("\n"));
   }
 
-  function wellfoundDescriptionEndPatterns() {
+  export function wellfoundDescriptionEndPatterns() {
     return [
       /about the company/i,
       /similar jobs/i,
@@ -847,7 +848,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     ];
   }
 
-  function bigRemoteJobDescriptionEndPatterns() {
+  export function bigRemoteJobDescriptionEndPatterns() {
     return [
       /^apply for this position$/i,
       /^related jobs:?$/i,
@@ -858,7 +859,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     ];
   }
 
-  function notYetUnicornsDescriptionEndPatterns() {
+  export function notYetUnicornsDescriptionEndPatterns() {
     return [
       /^apply now$/i,
       /^browse all jobs$/i,
@@ -870,7 +871,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     ];
   }
 
-  function ashbyDescriptionEndPatterns() {
+  export function ashbyDescriptionEndPatterns() {
     return [
       /^application$/i,
       /^apply for this job$/i,
@@ -878,7 +879,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     ];
   }
 
-  function extractTextAfterAshbyMetadata(text) {
+  export function extractTextAfterAshbyMetadata(text) {
     const lines = String(text || "")
       .split("\n")
       .map((line) => cleanText(line))
@@ -951,7 +952,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return parseJsonValue(document.querySelector(selector)?.textContent || "");
   }
 
-  function parseJsonValue(value) {
+  export function parseJsonValue(value) {
     try {
       return JSON.parse(value);
     } catch (_error) {
@@ -959,7 +960,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     }
   }
 
-  function formatNotYetUnicornsSchemaSalary(baseSalary) {
+  export function formatNotYetUnicornsSchemaSalary(baseSalary) {
     const value = baseSalary?.value;
     const currencySymbol = salaryCurrencySymbol(baseSalary?.currency);
 
@@ -978,7 +979,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return "";
   }
 
-  function salaryCurrencySymbol(currency) {
+  export function salaryCurrencySymbol(currency) {
     const symbols = {
       GBP: "£",
       USD: "$",
@@ -988,7 +989,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return symbols[currency] || cleanText(currency || "");
   }
 
-  function formatCompactSalaryNumber(value) {
+  export function formatCompactSalaryNumber(value) {
     const number = Number(value);
 
     if (!Number.isFinite(number)) {
@@ -1002,7 +1003,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return String(number);
   }
 
-  function firstSalaryMatch(text) {
+  export function firstSalaryMatch(text) {
     const matches = String(text || "").match(
       /(?:[$€£₹]\s?\d[\d.,]*\s?[kKmM]?(?:\s*[–-]\s*[$€£₹]?\s?\d[\d.,]*\s?[kKmM]?)?(?:\s*•\s*(?:no equity|[\d.,]+%\s*[–-]\s*[\d.,]+%))?)/i
     );
@@ -1010,7 +1011,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return cleanText(matches?.[0] || "");
   }
 
-  function normalizeSalary(value) {
+  export function normalizeSalary(value) {
     const salary = cleanText(value || "");
 
     if (!salary) {
@@ -1029,7 +1030,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return salary;
   }
 
-  function isExternalWebsiteHref(href) {
+  export function isExternalWebsiteHref(href) {
     return Boolean(
       href &&
       /^https?:\/\//.test(href) &&
@@ -1037,7 +1038,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
-  function titleCaseSlug(value) {
+  export function titleCaseSlug(value) {
     return cleanText(value)
       .split(/[-_\s]+/)
       .filter(Boolean)
@@ -1049,7 +1050,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return Math.abs(first.getBoundingClientRect().top - second.getBoundingClientRect().top);
   }
 
-  function cleanText(value) {
+  export function cleanText(value) {
     return String(value || "")
       .replace(/\u00a0/g, " ")
       .replace(/[ \t]+\n/g, "\n")
@@ -1069,4 +1070,3 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       window.setTimeout(resolve, milliseconds);
     });
   }
-})();

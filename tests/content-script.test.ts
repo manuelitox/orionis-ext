@@ -1,0 +1,268 @@
+import { JSDOM } from "jsdom";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { extractJob } from "../src/content-script.js";
+
+describe("extractJob", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("extracts a LinkedIn job page", async () => {
+    setPage("https://www.linkedin.com/jobs/view/123", `
+      <main>
+        <h1 class="jobs-unified-top-card__job-title">Frontend Engineer</h1>
+        <a class="jobs-unified-top-card__company-name">Acme</a>
+        <a href="https://acme.example">Company website</a>
+        <section class="jobs-description">
+          About the job
+          Responsibilities include building accessible UI and reliable product workflows.
+          Requirements include TypeScript, browser APIs, and pragmatic testing habits.
+        </section>
+        <p>$120k - $150k</p>
+      </main>
+    `, "Frontend Engineer | Acme | LinkedIn");
+
+    const job = await extractJob();
+
+    expect(job).toMatchObject({
+      source: "linkedIn",
+      title: "Frontend Engineer",
+      company: "Acme",
+      website: "https://acme.example/",
+      salary: "$120k - $150k",
+      description: expect.stringContaining("Responsibilities include building accessible UI"),
+      url: "https://www.linkedin.com/jobs/view/123"
+    });
+    expect(job.captured_at).toEqual(expect.any(String));
+  });
+
+  it("extracts a Wellfound job page", async () => {
+    setPage("https://wellfound.com/jobs/456", `
+      <main>
+        <h1>Full Stack Engineer</h1>
+        <a href="/company/acme">Acme Labs</a>
+        <a href="https://acme-labs.example">Visit our site</a>
+        <div class="styles_subheader__DfKjh">$90k - $120k</div>
+        <section class="styles_body__k1Fvd">
+          About the job
+          Build tools for hiring teams.
+          About the company
+          Boilerplate should not appear.
+        </section>
+      </main>
+    `, "Full Stack Engineer at Acme Labs • Wellfound");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "Full Stack Engineer",
+      company: "Acme Labs",
+      website: "https://acme-labs.example/",
+      salary: "$90k - $120k",
+      description: "Build tools for hiring teams."
+    });
+  });
+
+  it("extracts a Wellfound page from fallback text sections", async () => {
+    setPage("https://wellfound.com/jobs/457", `
+      <main>
+        <h1>Backend Engineer</h1>
+        <a href="/company/fallback-co">Fallback Co</a>
+        <a href="https://fallback.example">External</a>
+        <p>$100k - $130k</p>
+        <section>
+          About the job
+          Build APIs for product teams.
+          About the company
+          Ignore this section.
+        </section>
+      </main>
+    `, "Backend Engineer at Fallback Co • Wellfound");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "Backend Engineer",
+      company: "Fallback Co",
+      website: "https://fallback.example/",
+      salary: "$100k - $130k",
+      description: "Build APIs for product teams."
+    });
+  });
+
+  it("extracts a BigRemoteJob page", async () => {
+    setPage("https://bigremotejob.com/remote-jobs/product-engineer", `
+      <meta property="og:description" content="Company: Remote Co 🌎 Salary: $110k - $140k 💸">
+      <article>
+        <h1 class="bde-heading">Product Engineer</h1>
+        <a class="ee-postmeta-author">Remote Co</a>
+        <a class="ppma-author-user_url-profile-data" href="https://remote-co.example">Website</a>
+        <span class="ee-postmeta-term">$110k - $140k</span>
+        <section class="bde-rich-text-50-105">
+          Who we are
+          We build remote-first collaboration software for focused engineering teams.
+          Apply for this position
+          Form content
+        </section>
+      </article>
+    `, "Remote Product Engineer at Remote Co");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "bigRemoteJob",
+      title: "Product Engineer",
+      company: "Remote Co",
+      website: "https://remote-co.example/",
+      salary: "$110k - $140k",
+      description: "Who we are\nWe build remote-first collaboration software for focused engineering teams."
+    });
+  });
+
+  it("extracts BigRemoteJob descriptions from rich-text fallback candidates", async () => {
+    setPage("https://bigremotejob.com/remote-jobs/backend-engineer", `
+      <article>
+        <h1>Backend Engineer</h1>
+        <a rel="author">Remote Fallback Co</a>
+        <div class="breakdance-rich-text-styles">
+          Your team and role
+          Build backend systems for distributed teams with TypeScript and observability.
+          Hiring process
+          Ignore this part.
+        </div>
+      </article>
+    `, "Remote Backend Engineer at Remote Fallback Co");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "bigRemoteJob",
+      title: "Backend Engineer",
+      company: "Remote Fallback Co",
+      description: "Your team and role\nBuild backend systems for distributed teams with TypeScript and observability.\nHiring process\nIgnore this part."
+    });
+  });
+
+  it("extracts a Not Yet Unicorns page from embedded structured data", async () => {
+    setPage("https://notyetunicorns.com/job/789", `
+      <script id="__NEXT_DATA__" type="application/json">
+        {
+          "props": {
+            "pageProps": {
+              "jobData": {
+                "job": {
+                  "role_title": "Platform Engineer",
+                  "company_name": "Scaleup Ltd",
+                  "salary_range": "£80k - £100k",
+                  "description": "Own deployment pipelines and internal platform reliability."
+                },
+                "company": {
+                  "name": "Scaleup Ltd",
+                  "website_url": "https://scaleup.example"
+                }
+              }
+            }
+          }
+        }
+      </script>
+    `, "Platform Engineer at Scaleup Ltd | Not Yet Unicorns");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "notYetUnicorns",
+      title: "Platform Engineer",
+      company: "Scaleup Ltd",
+      website: "https://scaleup.example",
+      salary: "£80k - £100k",
+      description: "Own deployment pipelines and internal platform reliability."
+    });
+  });
+
+  it("extracts a Not Yet Unicorns page from JSON-LD when Next data is absent", async () => {
+    setPage("https://notyetunicorns.com/job/790", `
+      <script type="application/ld+json">
+        [{
+          "@type": "JobPosting",
+          "title": "Data Engineer",
+          "description": "Model data pipelines for early-stage product teams.",
+          "hiringOrganization": {
+            "name": "Schema Co",
+            "sameAs": "https://schema.example"
+          },
+          "baseSalary": {
+            "currency": "EUR",
+            "value": {
+              "minValue": 70000,
+              "maxValue": 90000
+            }
+          }
+        }]
+      </script>
+    `, "Data Engineer at Schema Co | Not Yet Unicorns");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "notYetUnicorns",
+      title: "Data Engineer",
+      company: "Schema Co",
+      website: "https://schema.example",
+      salary: "€70k-€90k",
+      description: "Model data pipelines for early-stage product teams."
+    });
+  });
+
+  it("extracts an Ashby job page", async () => {
+    setPage("https://jobs.ashbyhq.com/orionis/123e4567-e89b-12d3-a456-426614174000", `
+      <main>
+        <h1 data-testid="job-title">Staff Engineer</h1>
+        <a aria-label="Company website" href="https://orionis.example">Website</a>
+        <h2>Compensation</h2>
+        <p>$150k - $190k</p>
+        <section data-testid="job-description">
+          Overview
+          Lead architecture for a browser extension that captures job postings cleanly.
+          Apply for this job
+          Application form
+        </section>
+      </main>
+    `, "Staff Engineer @ Orionis | Ashby");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "ashby",
+      title: "Staff Engineer",
+      company: "Orionis",
+      website: "https://orionis.example/",
+      salary: "$150k - $190k",
+      description: "Lead architecture for a browser extension that captures job postings cleanly."
+    });
+  });
+
+  it("rejects unsupported pages", async () => {
+    setPage("https://example.com/jobs/123", "<h1>Unsupported</h1>", "Unsupported");
+
+    await expect(extractJob()).rejects.toThrow("This page is not a supported job posting.");
+  });
+});
+
+function setPage(url: string, html: string, title: string): void {
+  const dom = new JSDOM(html, { url });
+
+  dom.window.document.title = title;
+  Object.defineProperty(dom.window.HTMLElement.prototype, "innerText", {
+    configurable: true,
+    get() {
+      return this.textContent;
+    },
+    set(value) {
+      this.textContent = value;
+    }
+  });
+  dom.window.HTMLElement.prototype.getBoundingClientRect = () => ({
+    bottom: 100,
+    height: 100,
+    left: 0,
+    right: 100,
+    top: 0,
+    width: 100,
+    x: 0,
+    y: 0,
+    toJSON: () => ({})
+  });
+
+  vi.stubGlobal("window", dom.window);
+  vi.stubGlobal("document", dom.window.document);
+  vi.stubGlobal("HTMLElement", dom.window.HTMLElement);
+  vi.stubGlobal("DOMException", dom.window.DOMException);
+}
