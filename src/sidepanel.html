@@ -9,21 +9,47 @@
   <body>
     <main class="panel">
       <header class="panel-header">
-        <img class="logo" src="../assets/icon.svg" alt="" aria-hidden="true">
-        <div>
-          <h1>Orionis Capture</h1>
-          <p id="status" class="status status-info" role="status" aria-live="polite">Ready to capture this job post as Markdown.</p>
+        <div class="brand-lockup">
+          <img class="logo" src="../assets/icon.svg" alt="" aria-hidden="true">
+          <div>
+            <h1>Orionis Capture</h1>
+            <p class="subtitle">Job post to structured Markdown</p>
+          </div>
         </div>
+        <p id="status" class="status status-info" role="status" aria-live="polite">Ready to capture this job post as Markdown.</p>
       </header>
 
-      <section class="actions" aria-label="Capture actions">
-        <button id="refresh" type="button">Refresh</button>
-        <button id="copy" type="button">Copy Markdown</button>
-        <button id="save" type="button" class="primary">Save Markdown</button>
+      <section class="toolbar" aria-label="Capture actions">
+        <button id="refresh" type="button" class="button-secondary">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M20 11a8.1 8.1 0 0 0-14.1-5.4L4 7.5V3H2v8h8V9H5.4l1.9-1.9A6.1 6.1 0 0 1 18 11z"/>
+            <path d="M4 13a8.1 8.1 0 0 0 14.1 5.4l1.9-1.9V21h2v-8h-8v2h4.6l-1.9 1.9A6.1 6.1 0 0 1 6 13z"/>
+          </svg>
+          <span>Refresh</span>
+        </button>
+        <button id="copy" type="button" class="button-secondary">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M8 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-1v-2h1a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v1H8z"/>
+            <path d="M4 11a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1z"/>
+          </svg>
+          <span>Copy</span>
+        </button>
+        <button id="save" type="button" class="button-primary">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M5 3h12l2 2v16H5zm2 2v14h10V6.1L15.9 5z"/>
+            <path d="M8 5h7v5H8zm2 2v1h3V7zM8 15h8v2H8z"/>
+          </svg>
+          <span>Save</span>
+        </button>
       </section>
 
-      <label class="editor-label" for="markdown">Markdown</label>
-      <textarea id="markdown" spellcheck="true" placeholder="Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, or Ashby job post, then refresh to generate structured Markdown."></textarea>
+      <section class="editor-shell" aria-labelledby="markdown-label">
+        <div class="editor-header">
+          <label id="markdown-label" class="editor-label" for="markdown">Markdown</label>
+          <span class="editor-hint">Editable draft</span>
+        </div>
+        <textarea id="markdown" spellcheck="true" placeholder="Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, or Ashby job post, then refresh to generate structured Markdown."></textarea>
+      </section>
     </main>
 
     <script type="module" src="sidepanel.js"></script>
