@@ -1,5 +1,5 @@
-import { buildOrionisMarkdown } from "./markdown-template.js";
-import { buildRoleFilename, isSupportedJobUrl } from "./sidepanel-utils.js";
+import { buildOrionisMarkdown } from "./markdown.template.js";
+import { buildRoleFilename, isSupportedJobUrl } from "./sidepanel.utils.js";
 import type { CapturedJob, ExtractJobMessage, ExtractJobResponse } from "./types.js";
 
 const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";

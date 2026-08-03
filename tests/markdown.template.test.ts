@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOrionisMarkdown } from "../src/markdown-template.js";
+import { buildOrionisMarkdown } from "../src/markdown.template.js";
 import type { CapturedJob } from "../src/types.js";
 
 describe("buildOrionisMarkdown", () => {

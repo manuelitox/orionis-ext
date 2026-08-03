@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRoleFilename, extractMarkdownSection, isSupportedJobUrl } from "../src/sidepanel-utils.js";
+import { buildRoleFilename, extractMarkdownSection, isSupportedJobUrl } from "../src/sidepanel.utils.js";
 
 describe("isSupportedJobUrl", () => {
   it("accepts supported job page URLs", () => {
