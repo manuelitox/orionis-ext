@@ -2,28 +2,37 @@ export function isSupportedJobUrl(url: string | undefined): boolean {
   return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url) || isNotYetUnicornsJobUrl(url) || isAshbyJobUrl(url);
 }
 
-export function unsupportedJobPageMessage(url: string | undefined): string {
+export type UnsupportedJobPageMessages = {
+  linkedIn: string;
+  wellfound: string;
+  bigRemoteJob: string;
+  notYetUnicorns: string;
+  ashby: string;
+  generic: string;
+};
+
+export function unsupportedJobPageMessage(url: string | undefined, messages: UnsupportedJobPageMessages): string {
   if (isLinkedInUrl(url)) {
-    return "This LinkedIn page is not a job post. Open a specific LinkedIn job detail page before capturing.";
+    return messages.linkedIn;
   }
 
   if (isWellfoundUrl(url)) {
-    return "This Wellfound page is not a job post. Open a specific Wellfound job detail page before capturing.";
+    return messages.wellfound;
   }
 
   if (isBigRemoteJobSiteUrl(url)) {
-    return "This BigRemoteJob page is not a job post. Open a specific BigRemoteJob job detail page before capturing.";
+    return messages.bigRemoteJob;
   }
 
   if (isNotYetUnicornsUrl(url)) {
-    return "This Not Yet Unicorns page is not a job post. Open a specific Not Yet Unicorns job detail page before capturing.";
+    return messages.notYetUnicorns;
   }
 
   if (isAshbyUrl(url)) {
-    return "This Ashby page is not a valid job post. Open a specific Ashby job detail page before capturing.";
+    return messages.ashby;
   }
 
-  return "Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, or Ashby job page before capturing.";
+  return messages.generic;
 }
 
 export function buildRoleFilename(markdown: string): string {
