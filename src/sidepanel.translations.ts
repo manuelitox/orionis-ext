@@ -107,6 +107,14 @@ export class SidePanelTranslations {
       }
     });
 
+    document.querySelectorAll<HTMLElement>("[data-i18n-aria-label]").forEach((element) => {
+      const key = element.dataset.i18nAriaLabel;
+
+      if (isTranslationKey(key)) {
+        element.setAttribute("aria-label", this.t(key));
+      }
+    });
+
     document.querySelector<HTMLElement>(".toolbar")?.setAttribute("aria-label", this.t("actions.label"));
   }
 }

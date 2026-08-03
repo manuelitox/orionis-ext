@@ -10,6 +10,8 @@ const statusText = queryRequiredElement<HTMLElement>("#status");
 const refreshButton = queryRequiredElement<HTMLButtonElement>("#refresh");
 const copyButton = queryRequiredElement<HTMLButtonElement>("#copy");
 const saveButton = queryRequiredElement<HTMLButtonElement>("#save");
+const settingsButton = queryRequiredElement<HTMLButtonElement>("#settings");
+const settingsPopover = queryRequiredElement<HTMLElement>("#settings-popover");
 const languageSelect = queryRequiredElement<HTMLSelectElement>("#language");
 
 let rolesDirectoryHandle: FileSystemDirectoryHandle | null = null;
@@ -19,12 +21,46 @@ const t = translations.t;
 refreshButton.addEventListener("click", captureCurrentTab);
 copyButton.addEventListener("click", copyMarkdown);
 saveButton.addEventListener("click", saveRole);
+settingsButton.addEventListener("click", toggleSettingsPopover);
+document.addEventListener("click", closeSettingsPopoverOnOutsideClick);
+document.addEventListener("keydown", closeSettingsPopoverOnEscape);
 
 initializeSidePanel();
 
 function initializeSidePanel(): void {
   translations.initialize();
   captureCurrentTab();
+}
+
+function toggleSettingsPopover(): void {
+  const isOpen = !settingsPopover.hasAttribute("hidden");
+
+  setSettingsPopoverOpen(!isOpen);
+}
+
+function closeSettingsPopoverOnOutsideClick(event: MouseEvent): void {
+  const target = event.target;
+
+  if (!(target instanceof Node)) {
+    return;
+  }
+
+  if (settingsPopover.contains(target) || settingsButton.contains(target)) {
+    return;
+  }
+
+  setSettingsPopoverOpen(false);
+}
+
+function closeSettingsPopoverOnEscape(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    setSettingsPopoverOpen(false);
+  }
+}
+
+function setSettingsPopoverOpen(isOpen: boolean): void {
+  settingsPopover.toggleAttribute("hidden", !isOpen);
+  settingsButton.setAttribute("aria-expanded", String(isOpen));
 }
 
 async function captureCurrentTab(): Promise<void> {

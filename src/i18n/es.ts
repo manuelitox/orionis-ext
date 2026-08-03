@@ -19,6 +19,7 @@ export const es = {
   "actions.refresh": "Actualizar",
   "actions.copy": "Copiar",
   "actions.save": "Guardar",
+  "settings.open": "Abrir ajustes",
   "settings.languageLabel": "Idioma",
   "settings.languageAuto": "Auto",
   "settings.languageEnglish": "Inglés",

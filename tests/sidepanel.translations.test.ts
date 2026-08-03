@@ -10,6 +10,7 @@ describe("SidePanelTranslations", () => {
         <button><span data-i18n="actions.copy">Copy</span></button>
         <button><span data-i18n="actions.save">Save</span></button>
       </section>
+      <button id="settings" aria-label="Open settings" data-i18n-aria-label="settings.open"></button>
       <label id="language-label" for="language" data-i18n="settings.languageLabel">Language</label>
       <select id="language">
         <option value="auto" data-i18n="settings.languageAuto">Auto</option>
@@ -31,6 +32,7 @@ describe("SidePanelTranslations", () => {
     expect(document.documentElement.lang).toBe("es");
     expect(document.title).toBe("Orionis Capture");
     expect(languageSelect?.value).toBe("es");
+    expect(document.querySelector("#settings")?.getAttribute("aria-label")).toBe("Abrir ajustes");
     expect(document.querySelector("#language-label")?.textContent).toBe("Idioma");
     expect(document.querySelector(".toolbar")?.getAttribute("aria-label")).toBe("Acciones de captura");
     expect(document.querySelector("button span")?.textContent).toBe("Copiar");

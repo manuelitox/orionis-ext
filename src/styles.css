@@ -56,10 +56,18 @@ select {
   gap: var(--space-3);
 }
 
+.header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .brand-lockup {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .logo {
@@ -123,24 +131,46 @@ p {
   gap: var(--space-2);
 }
 
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  border: 0.0625rem solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-  padding: 0.625rem 0.75rem;
+.settings-menu {
+  position: relative;
+  flex: 0 0 auto;
 }
 
-.settings-row label {
+.icon-button {
+  width: 2.25rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+}
+
+.settings-popover {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: flex;
+  width: 13.5rem;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  padding: 0.75rem;
+}
+
+.settings-popover[hidden] {
+  display: none;
+}
+
+.settings-popover label {
   color: var(--color-muted);
   font-size: 0.8125rem;
   font-weight: 700;
 }
 
 select {
+  width: 100%;
   min-width: 7.25rem;
   border: 0.0625rem solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -296,5 +326,9 @@ textarea:focus {
   button svg {
     width: 0.9375rem;
     height: 0.9375rem;
+  }
+
+  .settings-popover {
+    width: 12.5rem;
   }
 }

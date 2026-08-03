@@ -17,6 +17,7 @@ export const en = {
   "actions.refresh": "Refresh",
   "actions.copy": "Copy",
   "actions.save": "Save",
+  "settings.open": "Open settings",
   "settings.languageLabel": "Language",
   "settings.languageAuto": "Auto",
   "settings.languageEnglish": "English",

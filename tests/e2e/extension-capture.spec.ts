@@ -240,12 +240,15 @@ test("re-translates side panel UI when the language setting changes", async () =
     await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html`);
 
     await expect(panelPage.locator("#copy")).toContainText("Copy");
+    await expect(panelPage.locator("#settings-popover")).toBeHidden();
+    await panelPage.locator("#settings").click();
     await expect(panelPage.locator("#language-label")).toHaveText("Language");
 
     await panelPage.locator("#language").selectOption("es");
 
     await expect(panelPage.locator("#copy")).toContainText("Copiar");
     await expect(panelPage.locator("#save")).toContainText("Guardar");
+    await expect(panelPage.locator("#settings")).toHaveAttribute("aria-label", "Abrir ajustes");
     await expect(panelPage.locator("#language-label")).toHaveText("Idioma");
     await expect(panelPage.locator("#markdown")).toHaveAttribute(
       "placeholder",
