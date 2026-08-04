@@ -1,4 +1,4 @@
-import { expect, test, chromium, type BrowserContext } from "@playwright/test";
+import { expect, test, chromium, type BrowserContext, type Page } from "@playwright/test";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -222,6 +222,62 @@ for (const captureCase of captureCases) {
   });
 }
 
+test("confirms before replacing an edited draft after a supported capture succeeds", async () => {
+  const captureCase = captureCases[0];
+  const extensionPath = resolve("dist");
+  const userDataDir = await mkdtemp(join(tmpdir(), "orionis-ext-e2e-"));
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    channel: "chromium",
+    headless: true,
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`
+    ]
+  });
+
+  try {
+    const extensionId = await getExtensionId(context);
+    await context.route(captureCase.url, (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: captureCase.fixture
+      })
+    );
+
+    const jobPage = await context.newPage();
+    await jobPage.goto(captureCase.url);
+    await expect(jobPage.locator("h1").first()).toHaveText(captureCase.title);
+
+    const panelPage = await context.newPage();
+    await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html`);
+    await refreshFromJobTab(panelPage, captureCase.tabUrlPattern);
+    await expect(panelPage.locator("#status")).toHaveText("Markdown ready. Review, copy, or save it.");
+
+    const editedDraft = "# JD\nManual edit that should survive cancelling replacement.\n";
+    await panelPage.locator("#markdown").fill(editedDraft);
+
+    panelPage.once("dialog", async (dialog) => {
+      expect(dialog.message()).toBe("Replace your edited draft with a fresh capture from this supported job page?");
+      await dialog.dismiss();
+    });
+    await refreshFromJobTab(panelPage, captureCase.tabUrlPattern);
+
+    await expect(panelPage.locator("#status")).toHaveText("Edited draft kept.");
+    await expect(panelPage.locator("#markdown")).toHaveValue(editedDraft);
+
+    panelPage.once("dialog", async (dialog) => {
+      expect(dialog.message()).toBe("Replace your edited draft with a fresh capture from this supported job page?");
+      await dialog.accept();
+    });
+    await refreshFromJobTab(panelPage, captureCase.tabUrlPattern);
+
+    await expect(panelPage.locator("#status")).toHaveText("Markdown ready. Review, copy, or save it.");
+    await expect(panelPage.locator("#markdown")).toHaveValue(/# Role\nFrontend Engineer/);
+  } finally {
+    await context.close();
+  }
+});
+
 test("re-translates side panel UI when the language setting changes", async () => {
   const extensionPath = resolve("dist");
   const userDataDir = await mkdtemp(join(tmpdir(), "orionis-ext-e2e-"));
@@ -258,6 +314,19 @@ test("re-translates side panel UI when the language setting changes", async () =
     await context.close();
   }
 });
+
+async function refreshFromJobTab(panelPage: Page, tabUrlPattern: string): Promise<void> {
+  await panelPage.evaluate(async (urlPattern) => {
+    const [jobTab] = await chrome.tabs.query({ url: urlPattern });
+
+    if (!jobTab?.id) {
+      throw new Error(`Fixture tab was not available for ${urlPattern}.`);
+    }
+
+    await chrome.tabs.update(jobTab.id, { active: true });
+    document.querySelector<HTMLButtonElement>("#refresh")?.click();
+  }, tabUrlPattern);
+}
 
 async function getExtensionId(context: BrowserContext): Promise<string> {
   let [background] = context.serviceWorkers();

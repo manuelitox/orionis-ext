@@ -1,6 +1,6 @@
-import { buildOrionisMarkdown } from "./markdown.template.js";
+import { buildOrionisMarkdown, type OrionisMarkdownDraft } from "./markdown.template.js";
 import { SidePanelTranslations } from "./sidepanel.translations.js";
-import { buildRoleFilename, isSupportedJobUrl, unsupportedJobPageMessage } from "./sidepanel.utils.js";
+import { buildRoleFilename, isSupportedJobUrl } from "./sidepanel.utils.js";
 import type { CapturedJob, ExtractJobMessage, ExtractJobResponse } from "./types.js";
 
 const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
@@ -17,6 +17,7 @@ const languageSelect = queryRequiredElement<HTMLSelectElement>("#language");
 let rolesDirectoryHandle: FileSystemDirectoryHandle | null = null;
 const translations = new SidePanelTranslations(languageSelect);
 const t = translations.t;
+let lastProgrammaticMarkdown = "";
 
 refreshButton.addEventListener("click", captureCurrentTab);
 copyButton.addEventListener("click", copyMarkdown);
@@ -27,8 +28,9 @@ document.addEventListener("keydown", closeSettingsPopoverOnEscape);
 
 initializeSidePanel();
 
-function initializeSidePanel(): void {
+async function initializeSidePanel(): Promise<void> {
   translations.initialize();
+  await renderManualDraftForCurrentTab({ preserveEdited: false });
   captureCurrentTab();
 }
 
@@ -71,17 +73,70 @@ async function captureCurrentTab(): Promise<void> {
     const tab = await getActiveTab();
 
     if (!tab?.id || !isSupportedJobUrl(tab.url)) {
-      throw new Error(unsupportedJobPageMessage(tab?.url, translations.unsupportedJobPageMessages()));
+      renderManualDraftForTab(tab, { preserveEdited: true });
+      return;
     }
 
     const job = await requestJobData(tab.id);
-    markdownEditor.value = buildOrionisMarkdown(job);
+
+    if (isEditorDirty() && !window.confirm(t("confirm.replaceEditedDraft"))) {
+      setStatus(t("status.editedDraftKept"));
+      return;
+    }
+
+    setMarkdown(buildOrionisMarkdown(job));
     setStatus(t("status.markdownReady"), "success");
   } catch (error) {
-    setStatus(translations.localizedErrorMessage(error, t("status.captureFailed")), "error");
+    const errorMessage = translations.localizedErrorMessage(error, t("status.captureFailed"));
+
+    setStatus(`${errorMessage} ${t("status.editedDraftKept")}`, "error");
   } finally {
     refreshButton.disabled = false;
   }
+}
+
+async function renderManualDraftForCurrentTab(options: { preserveEdited: boolean }): Promise<void> {
+  renderManualDraftForTab(await getActiveTab(), options);
+}
+
+function renderManualDraftForTab(tab: chrome.tabs.Tab | undefined, options: { preserveEdited: boolean }): void {
+  if (options.preserveEdited && isEditorDirty()) {
+    setStatus(t("status.editedDraftKept"));
+    return;
+  }
+
+  setMarkdown(buildOrionisMarkdown(buildManualDraft(tab?.url)));
+  setStatus(t("status.manualDraftReady"), "success");
+}
+
+function buildManualDraft(url: string | undefined): OrionisMarkdownDraft {
+  return {
+    source: sourceFromUrl(url),
+    captured_at: new Date().toISOString(),
+    title: "",
+    company: "",
+    website: "",
+    salary: "",
+    description: "",
+    url: url || ""
+  };
+}
+
+function sourceFromUrl(url: string | undefined): string {
+  try {
+    return new URL(url || "").hostname;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function setMarkdown(markdown: string): void {
+  markdownEditor.value = markdown;
+  lastProgrammaticMarkdown = markdown;
+}
+
+function isEditorDirty(): boolean {
+  return markdownEditor.value !== lastProgrammaticMarkdown;
 }
 
 async function copyMarkdown(): Promise<void> {
