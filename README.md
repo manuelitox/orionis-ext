@@ -108,7 +108,7 @@ Orionis Capture is local-first:
 - No backend is used.
 - No job data is sent to external servers.
 - No background scraping is performed.
-- The extension only reads the active tab on supported job sites.
+- The extension only reads the active tab; unsupported pages use the tab URL to prefill manual draft metadata.
 - You decide when to copy, download, or save the generated Markdown.
 
 ## Limitations

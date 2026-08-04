@@ -198,17 +198,7 @@ for (const captureCase of captureCases) {
       await expect(jobPage.locator("h1").first()).toHaveText(captureCase.title);
 
       const panelPage = await context.newPage();
-      await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html`);
-      await panelPage.evaluate(async (tabUrlPattern) => {
-        const [jobTab] = await chrome.tabs.query({ url: tabUrlPattern });
-
-        if (!jobTab?.id) {
-          throw new Error(`Fixture tab was not available for ${tabUrlPattern}.`);
-        }
-
-        await chrome.tabs.update(jobTab.id, { active: true });
-        document.querySelector<HTMLButtonElement>("#refresh")?.click();
-      }, captureCase.tabUrlPattern);
+      await openPanelForJobTab(panelPage, extensionId, captureCase.tabUrlPattern);
 
       await expect(panelPage.locator("#status")).toHaveText("Markdown ready. Review, copy, or save it.");
       const markdown = await panelPage.locator("#markdown").inputValue();
@@ -249,8 +239,7 @@ test("confirms before replacing an edited draft after a supported capture succee
     await expect(jobPage.locator("h1").first()).toHaveText(captureCase.title);
 
     const panelPage = await context.newPage();
-    await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html`);
-    await refreshFromJobTab(panelPage, captureCase.tabUrlPattern);
+    await openPanelForJobTab(panelPage, extensionId, captureCase.tabUrlPattern);
     await expect(panelPage.locator("#status")).toHaveText("Markdown ready. Review, copy, or save it.");
 
     const editedDraft = "# JD\nManual edit that should survive cancelling replacement.\n";
@@ -260,7 +249,7 @@ test("confirms before replacing an edited draft after a supported capture succee
       expect(dialog.message()).toBe("Replace your edited draft with a fresh capture from this supported job page?");
       await dialog.dismiss();
     });
-    await refreshFromJobTab(panelPage, captureCase.tabUrlPattern);
+    await panelPage.locator("#refresh").click();
 
     await expect(panelPage.locator("#status")).toHaveText("Edited draft kept.");
     await expect(panelPage.locator("#markdown")).toHaveValue(editedDraft);
@@ -269,10 +258,59 @@ test("confirms before replacing an edited draft after a supported capture succee
       expect(dialog.message()).toBe("Replace your edited draft with a fresh capture from this supported job page?");
       await dialog.accept();
     });
-    await refreshFromJobTab(panelPage, captureCase.tabUrlPattern);
+    await panelPage.locator("#refresh").click();
 
     await expect(panelPage.locator("#status")).toHaveText("Markdown ready. Review, copy, or save it.");
     await expect(panelPage.locator("#markdown")).toHaveValue(/# Role\nFrontend Engineer/);
+  } finally {
+    await context.close();
+  }
+});
+
+test("preserves source and JD URL in a manual draft when capture cannot complete", async () => {
+  const listPageUrl = "https://www.linkedin.com/jobs/search/";
+  const extensionPath = resolve("dist");
+  const userDataDir = await mkdtemp(join(tmpdir(), "orionis-ext-e2e-"));
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    channel: "chromium",
+    headless: true,
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`
+    ]
+  });
+
+  try {
+    const extensionId = await getExtensionId(context);
+    await context.route(listPageUrl, (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: `<!doctype html>
+          <html>
+            <body>
+              <main>
+                <h1>LinkedIn job search</h1>
+                <p>List page content.</p>
+              </main>
+            </body>
+          </html>`
+      })
+    );
+
+    const jobPage = await context.newPage();
+    await jobPage.goto(listPageUrl);
+    await expect(jobPage.locator("h1")).toHaveText("LinkedIn job search");
+
+    const panelPage = await context.newPage();
+    await openPanelForJobTab(panelPage, extensionId, "https://www.linkedin.com/jobs/search/");
+
+    await expect(panelPage.locator("#status")).toHaveText(/Edited draft kept\.$/);
+    const markdown = await panelPage.locator("#markdown").inputValue();
+
+    expect(markdown).toContain("# Source\nwww.linkedin.com");
+    expect(markdown).toContain(`# JD URL\n${listPageUrl}`);
+    expect(markdown).toContain("# Company\n\n\n# Role\n");
+    expect(markdown).toContain("# JD\n\n\n# Notes\n");
   } finally {
     await context.close();
   }
@@ -315,17 +353,27 @@ test("re-translates side panel UI when the language setting changes", async () =
   }
 });
 
-async function refreshFromJobTab(panelPage: Page, tabUrlPattern: string): Promise<void> {
-  await panelPage.evaluate(async (urlPattern) => {
+async function openPanelForJobTab(panelPage: Page, extensionId: string, tabUrlPattern: string): Promise<void> {
+  await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html`);
+  const jobTab = await panelPage.evaluate(async (urlPattern) => {
     const [jobTab] = await chrome.tabs.query({ url: urlPattern });
 
     if (!jobTab?.id) {
       throw new Error(`Fixture tab was not available for ${urlPattern}.`);
     }
 
-    await chrome.tabs.update(jobTab.id, { active: true });
-    document.querySelector<HTMLButtonElement>("#refresh")?.click();
+    return {
+      id: jobTab.id,
+      url: jobTab.url || ""
+    };
   }, tabUrlPattern);
+
+  const params = new URLSearchParams({
+    tabId: String(jobTab.id),
+    url: jobTab.url
+  });
+
+  await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html?${params.toString()}`);
 }
 
 async function getExtensionId(context: BrowserContext): Promise<string> {
