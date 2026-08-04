@@ -1,6 +1,10 @@
 import type { CapturedJob } from "./types.js";
 
-export function buildOrionisMarkdown(job: CapturedJob): string {
+export type OrionisMarkdownDraft = Omit<CapturedJob, "source"> & {
+  source: string;
+};
+
+export function buildOrionisMarkdown(job: OrionisMarkdownDraft): string {
   const company = normalizeField(job.company);
   const role = normalizeField(job.title);
   const website = normalizeField(job.website);

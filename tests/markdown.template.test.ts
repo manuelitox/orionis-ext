@@ -65,6 +65,22 @@ Build reliable product interfaces.
     expect(markdown).toContain("# Company\n\n\n# Role\n");
     expect(markdown).toContain("# JD\n\n\n# Notes\n");
   });
+
+  it("accepts arbitrary manual draft sources", () => {
+    const markdown = buildOrionisMarkdown({
+      title: "",
+      company: "",
+      website: "",
+      salary: "",
+      description: "",
+      source: "jobs.lever.co",
+      captured_at: "2026-08-04T10:00:00.000Z",
+      url: "https://jobs.lever.co/acme/123"
+    });
+
+    expect(markdown).toContain("# Source\njobs.lever.co\n");
+    expect(markdown).toContain("# JD URL\nhttps://jobs.lever.co/acme/123\n");
+  });
 });
 
 function buildJob(overrides: Partial<CapturedJob>): CapturedJob {

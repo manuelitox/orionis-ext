@@ -1,9 +1,16 @@
-import { buildOrionisMarkdown } from "./markdown.template.js";
+import { buildOrionisMarkdown, type OrionisMarkdownDraft } from "./markdown.template.js";
 import { SidePanelTranslations } from "./sidepanel.translations.js";
-import { buildRoleFilename, isSupportedJobUrl, unsupportedJobPageMessage } from "./sidepanel.utils.js";
-import type { CapturedJob, ExtractJobMessage, ExtractJobResponse } from "./types.js";
+import { buildRoleFilename, isSupportedJobUrl } from "./sidepanel.utils.js";
+import type {
+  ActiveTabMetadata,
+  CapturedJob,
+  ExtractJobMessage,
+  ExtractJobResponse,
+  GetActiveTabMetadataMessage
+} from "./types.js";
 
 const MESSAGE_TYPE = "ORIONIS_EXTRACT_JOB";
+const ACTIVE_TAB_METADATA_MESSAGE_TYPE = "ORIONIS_GET_ACTIVE_TAB_METADATA";
 
 const markdownEditor = queryRequiredElement<HTMLTextAreaElement>("#markdown");
 const statusText = queryRequiredElement<HTMLElement>("#status");
@@ -17,6 +24,8 @@ const languageSelect = queryRequiredElement<HTMLSelectElement>("#language");
 let rolesDirectoryHandle: FileSystemDirectoryHandle | null = null;
 const translations = new SidePanelTranslations(languageSelect);
 const t = translations.t;
+let lastProgrammaticMarkdown = "";
+const invokedTab = invokedTabFromLocation();
 
 refreshButton.addEventListener("click", captureCurrentTab);
 copyButton.addEventListener("click", copyMarkdown);
@@ -27,8 +36,9 @@ document.addEventListener("keydown", closeSettingsPopoverOnEscape);
 
 initializeSidePanel();
 
-function initializeSidePanel(): void {
+async function initializeSidePanel(): Promise<void> {
   translations.initialize();
+  await renderManualDraftForCurrentTab({ preserveEdited: false });
   captureCurrentTab();
 }
 
@@ -70,18 +80,71 @@ async function captureCurrentTab(): Promise<void> {
   try {
     const tab = await getActiveTab();
 
-    if (!tab?.id || !isSupportedJobUrl(tab.url)) {
-      throw new Error(unsupportedJobPageMessage(tab?.url, translations.unsupportedJobPageMessages()));
+    if (!tab?.id || (tab.url && !isSupportedJobUrl(tab.url))) {
+      renderManualDraftForTab(tab, { preserveEdited: true });
+      return;
     }
 
     const job = await requestJobData(tab.id);
-    markdownEditor.value = buildOrionisMarkdown(job);
+
+    if (isEditorDirty() && !window.confirm(t("confirm.replaceEditedDraft"))) {
+      setStatus(t("status.editedDraftKept"));
+      return;
+    }
+
+    setMarkdown(buildOrionisMarkdown(job));
     setStatus(t("status.markdownReady"), "success");
   } catch (error) {
-    setStatus(translations.localizedErrorMessage(error, t("status.captureFailed")), "error");
+    const errorMessage = translations.localizedErrorMessage(error, t("status.captureFailed"));
+
+    setStatus(`${errorMessage} ${t("status.editedDraftKept")}`, "error");
   } finally {
     refreshButton.disabled = false;
   }
+}
+
+async function renderManualDraftForCurrentTab(options: { preserveEdited: boolean }): Promise<void> {
+  renderManualDraftForTab(await getActiveTab(), options);
+}
+
+function renderManualDraftForTab(tab: ActiveTabMetadata | undefined, options: { preserveEdited: boolean }): void {
+  if (options.preserveEdited && isEditorDirty()) {
+    setStatus(t("status.editedDraftKept"));
+    return;
+  }
+
+  setMarkdown(buildOrionisMarkdown(buildManualDraft(tab?.url)));
+  setStatus(t("status.manualDraftReady"), "success");
+}
+
+function buildManualDraft(url: string | undefined): OrionisMarkdownDraft {
+  return {
+    source: sourceFromUrl(url),
+    captured_at: new Date().toISOString(),
+    title: "",
+    company: "",
+    website: "",
+    salary: "",
+    description: "",
+    url: url || ""
+  };
+}
+
+function sourceFromUrl(url: string | undefined): string {
+  try {
+    return new URL(url || "").hostname;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function setMarkdown(markdown: string): void {
+  markdownEditor.value = markdown;
+  lastProgrammaticMarkdown = markdown;
+}
+
+function isEditorDirty(): boolean {
+  return markdownEditor.value !== lastProgrammaticMarkdown;
 }
 
 async function copyMarkdown(): Promise<void> {
@@ -136,9 +199,54 @@ async function saveRole(): Promise<void> {
   }
 }
 
-async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
+async function getActiveTab(): Promise<ActiveTabMetadata | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab;
+
+  if (tab?.url && !isExtensionPageUrl(tab.url)) {
+    return { id: tab.id, url: tab.url };
+  }
+
+  if (invokedTab) {
+    return invokedTab;
+  }
+
+  const actionTab = await requestActiveTabMetadata();
+
+  if (actionTab?.url || actionTab?.id) {
+    return actionTab;
+  }
+
+  return tab ? { id: tab.id, url: tab.url } : undefined;
+}
+
+async function requestActiveTabMetadata(): Promise<ActiveTabMetadata | undefined> {
+  const message: GetActiveTabMetadataMessage = { type: ACTIVE_TAB_METADATA_MESSAGE_TYPE };
+
+  try {
+    return await chrome.runtime.sendMessage<GetActiveTabMetadataMessage, ActiveTabMetadata>(message);
+  } catch (_error) {
+    return undefined;
+  }
+}
+
+function invokedTabFromLocation(): ActiveTabMetadata | undefined {
+  const params = new URLSearchParams(window.location.search);
+  const rawTabId = params.get("tabId");
+  const tabId = rawTabId ? Number(rawTabId) : NaN;
+  const url = params.get("url") || undefined;
+
+  if (!Number.isInteger(tabId) && !url) {
+    return undefined;
+  }
+
+  return {
+    id: Number.isInteger(tabId) ? tabId : undefined,
+    url
+  };
+}
+
+function isExtensionPageUrl(url: string): boolean {
+  return url.startsWith(`chrome-extension://${chrome.runtime.id}/`);
 }
 
 async function requestJobData(tabId: number): Promise<CapturedJob> {

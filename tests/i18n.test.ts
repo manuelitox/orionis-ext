@@ -37,6 +37,12 @@ describe("i18n", () => {
     expect(t("status.savedFile", { filename: "role.md" })).toBe("role.md guardado.");
   });
 
+  it("falls back to English if an unexpected language reaches the translator", () => {
+    const t = createTranslator("fr" as never);
+
+    expect(t("actions.copy")).toBe("Copy");
+  });
+
   it("persists the explicit language setting locally", () => {
     expect(loadLanguageSetting()).toBe("auto");
 

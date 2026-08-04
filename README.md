@@ -2,7 +2,7 @@
 
 Orionis Capture is a lightweight browser extension that turns supported job posts into structured, editable Markdown.
 
-It is designed for people who collect job descriptions for notes, AI-assisted workflows, role tracking, or Orionis. The extension reads the job page you are already viewing, prepares a clean Markdown draft, and lets you copy or save it.
+It is designed for people who collect job descriptions for notes, AI-assisted workflows, role tracking, or Orionis. The extension reads supported job pages automatically, prepares a clean Markdown draft, and lets you copy or save it. On unsupported sites, it starts a manual draft with the capture timestamp, source hostname, and current URL so you can paste the job details into the same structure.
 
 ## Supported Sites
 
@@ -36,16 +36,16 @@ Orionis Capture uses one fixed Markdown structure:
 # Notes
 ```
 
-The extension captures visible and verifiable fields from the current page. `Source` is derived from the current job URL, and `Captured At` is an ISO timestamp generated when the page is captured. It does not guess hidden fields or infer details that are not available in the job post.
+The extension captures visible and verifiable fields from supported pages. `Source` is derived from the current job URL, and `Captured At` is an ISO timestamp generated when the page is captured. Manual drafts leave job-specific fields empty. The extension does not guess hidden fields or infer details that are not available in the job post.
 
 ## Workflow
 
-1. Open a supported job post.
+1. Open a job post.
 2. Open the Orionis Capture side panel.
 3. Review the generated Markdown.
 4. Click Copy Markdown or Save Markdown.
 
-The Markdown remains editable before copying or saving, so you can clean up any site-specific formatting issues.
+The Markdown remains editable before copying or saving, so you can clean up any site-specific formatting issues or paste details manually from unsupported sites. Refresh replaces edited content only after confirmation when a supported-page capture succeeds.
 
 ## Install Locally
 
@@ -108,7 +108,7 @@ Orionis Capture is local-first:
 - No backend is used.
 - No job data is sent to external servers.
 - No background scraping is performed.
-- The extension only reads the active tab on supported job sites.
+- The extension only reads the active tab; unsupported pages use the tab URL to prefill manual draft metadata.
 - You decide when to copy, download, or save the generated Markdown.
 
 ## Limitations
@@ -116,7 +116,7 @@ Orionis Capture is local-first:
 - Job sites can change their HTML, which may break extraction until the extension is updated.
 - Some fields may be empty if the job page does not expose them clearly.
 - Salary and company website are captured only when visible or detectable.
-- Unsupported job sites are ignored.
+- Unsupported job sites require manual copy and paste into the generated Markdown draft.
 - The extension does not analyze, rank, or classify jobs.
 - The generated Markdown should be reviewed before use.
 

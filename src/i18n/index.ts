@@ -29,7 +29,8 @@ export function resolveLanguage(setting: LanguageSetting, languages = browserLan
 
 export function createTranslator(language: ResolvedLanguage) {
   return function t(key: TranslationKey, replacements: Record<string, string> = {}): string {
-    const template = dictionaries[language][key] || dictionaries.en[key] || key;
+    const dictionary = dictionaries[language] || dictionaries.en;
+    const template = dictionary[key] || dictionaries.en[key] || key;
 
     return Object.entries(replacements).reduce(
       (message, [name, value]) => message.replaceAll(`{${name}}`, value),
