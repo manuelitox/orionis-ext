@@ -3,7 +3,7 @@
     "message": "Orionis Capture"
   },
   "extensionDescription": {
-    "message": "Capture LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, and Ashby job posts as structured Markdown."
+    "message": "Capture LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, and Y Combinator job posts as structured Markdown."
   },
   "actionDefaultTitle": {
     "message": "Capture job as Markdown"

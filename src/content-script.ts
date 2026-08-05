@@ -59,6 +59,17 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
         salary: getAshbySalary,
         description: getAshbyJobDescription
       }
+    },
+    {
+      source: "yCombinator",
+      urlPattern: /^https:\/\/(?:www\.workatastartup\.com\/jobs\/\d+|www\.ycombinator\.com\/companies\/[^/?#]+\/jobs\/[^/?#]+)\/?(?:[?#].*)?$/i,
+      fields: {
+        title: getYCombinatorJobTitle,
+        company: getYCombinatorCompanyName,
+        website: getYCombinatorCompanyWebsite,
+        salary: getYCombinatorSalary,
+        description: getYCombinatorJobDescription
+      }
     }
   ];
 
@@ -175,6 +186,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       bigRemoteJob: "BigRemoteJob",
       linkedIn: "LinkedIn",
       notYetUnicorns: "Not Yet Unicorns",
+      yCombinator: "Y Combinator",
       wellfound: "Wellfound"
     };
 
@@ -616,6 +628,64 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return stripAshbyBoilerplate(extractAshbyDescription(pageText) || pageText);
   }
 
+  function getYCombinatorJobTitle() {
+    return (
+      textFromFirst([
+        "main h1",
+        "article h1",
+        "h1"
+      ]) || parseYCombinatorTitleFromDocument()
+    );
+  }
+
+  function getYCombinatorCompanyName() {
+    return (
+      parseYCombinatorCompanyFromDocument() ||
+      textFromFirst([
+        "a[href^='/companies/'] h1",
+        "a[href^='/companies/']",
+        "main h2",
+        "aside h2"
+      ]) ||
+      titleCaseSlug(parseYCombinatorCompanySlug())
+    );
+  }
+
+  function getYCombinatorCompanyWebsite() {
+    return (
+      hrefFromFirst([
+        "a[href^='http'][aria-label*='website' i]",
+        "a[href^='http']"
+      ], isExternalWebsiteHref) || ""
+    );
+  }
+
+  function getYCombinatorSalary() {
+    return normalizeSalary(firstSalaryMatch(cleanText(document.body?.innerText || getYCombinatorMetaDescription())));
+  }
+
+  function getYCombinatorJobDescription() {
+    const metaDescription = getYCombinatorMetaDescription();
+
+    if (metaDescription) {
+      return stripYCombinatorBoilerplate(metaDescription);
+    }
+
+    const descriptionRoot = bestTextElement([
+      "main article",
+      "main [class*='prose']",
+      "main [class*='whitespace-pre-line']",
+      "main [class*='job']",
+      "article",
+      "main"
+    ]);
+
+    return stripYCombinatorBoilerplate(
+      extractYCombinatorDescription(cleanText(descriptionRoot?.innerText || descriptionRoot?.textContent || "")) ||
+      cleanText(descriptionRoot?.innerText || descriptionRoot?.textContent || "")
+    );
+  }
+
   function textFromFirst(selectors: string[]): string {
     const element = firstVisibleElement(selectors);
     return cleanText(element?.innerText || element?.textContent || "");
@@ -752,6 +822,26 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return cleanText(new URL(window.location.href).pathname.split("/").filter(Boolean)[0] || "");
   }
 
+  export function parseYCombinatorTitleFromDocument() {
+    const title = document.title.split(" at ")[0]?.trim() || document.title;
+    return cleanText(title.replace(/\s+\|\s+Y Combinator$/i, ""));
+  }
+
+  export function parseYCombinatorCompanyFromDocument() {
+    const titleMatch = document.title.match(/\s+at\s+(.+?)\s*(?:\|\s*Y Combinator)?$/i);
+    if (titleMatch?.[1]) {
+      return cleanText(titleMatch[1]);
+    }
+
+    const metaTitle = cleanText(document.querySelector<HTMLMetaElement>("meta[name='title']")?.content || "");
+    const metaMatch = metaTitle.match(/\s+at\s+(.+?)\s*(?:\|\s*Y Combinator)?$/i);
+    return cleanText(metaMatch?.[1] || "");
+  }
+
+  export function parseYCombinatorCompanySlug() {
+    return cleanText(new URL(window.location.href).pathname.split("/").filter(Boolean)[1] || "");
+  }
+
   export function parseBigRemoteJobMetaField(label) {
     const description = cleanText(
       document.querySelector<HTMLMetaElement>("meta[property='og:description']")?.content ||
@@ -827,6 +917,15 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
+  export function stripYCombinatorBoilerplate(text) {
+    return cleanText(
+      text
+        .replace(/\n?apply to role[\s\S]*$/i, "")
+        .replace(/\n?apply now[\s\S]*$/i, "")
+        .replace(/\n?about the company[\s\S]*$/i, "")
+    );
+  }
+
   export function extractWellfoundDescription(text) {
     return (
       extractTextBetween(text, /about the job/i, wellfoundDescriptionEndPatterns()) ||
@@ -855,6 +954,14 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       extractTextBetween(text, /^overview$/i, ashbyDescriptionEndPatterns()) ||
       extractTextBetween(text, /^(about|about us|the role|job description)$/i, ashbyDescriptionEndPatterns()) ||
       extractTextAfterAshbyMetadata(text)
+    );
+  }
+
+  export function extractYCombinatorDescription(text) {
+    return (
+      extractTextBetween(text, /^(about the role|the role|job description)$/i, yCombinatorDescriptionEndPatterns()) ||
+      extractTextBetween(text, /^about .+$/i, yCombinatorDescriptionEndPatterns()) ||
+      ""
     );
   }
 
@@ -919,6 +1026,24 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       /^apply for this job$/i,
       /^submit application$/i
     ];
+  }
+
+  export function yCombinatorDescriptionEndPatterns() {
+    return [
+      /^apply to role$/i,
+      /^apply now$/i,
+      /^about the company$/i,
+      /^founders$/i,
+      /^company$/i
+    ];
+  }
+
+  function getYCombinatorMetaDescription() {
+    return cleanText(
+      document.querySelector<HTMLMetaElement>("meta[name='description']")?.content ||
+      document.querySelector<HTMLMetaElement>("meta[property='og:description']")?.content ||
+      ""
+    );
   }
 
   export function extractTextAfterAshbyMetadata(text) {
@@ -1076,7 +1201,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return Boolean(
       href &&
       /^https?:\/\//.test(href) &&
-      !/linkedin\.com|wellfound\.com|bigremotejob\.com|notyetunicorns\.com|ashbyhq\.com/.test(href)
+      !/linkedin\.com|wellfound\.com|bigremotejob\.com|notyetunicorns\.com|ashbyhq\.com|ycombinator\.com/.test(href)
     );
   }
 

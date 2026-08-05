@@ -168,6 +168,42 @@ const captureCases: CaptureCase[] = [
       "# Role\nStaff Engineer",
       "Lead architecture for a browser extension that captures job postings cleanly."
     ]
+  },
+  {
+    name: "Y Combinator",
+    url: "https://www.workatastartup.com/jobs/95982",
+    tabUrlPattern: "https://www.workatastartup.com/jobs/*",
+    title: "Growth Lead – Creator Program & Paid Social",
+    fixture: `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Growth Lead – Creator Program & Paid Social at Candle | Y Combinator</title>
+          <meta name="description" content="Relationships are the single greatest predictor of long-term health and happiness.
+
+The Role
+
+We're looking for a Growth Lead to own Candle's creator program, UGC engine, and creator community.
+
+Why Candle
+
+  - $130K–$180K depending on experience + equity
+">
+        </head>
+        <body>
+          <main>
+            <h1>Growth Lead – Creator Program & Paid Social</h1>
+            <a href="https://www.ycombinator.com/companies/candle">Candle</a>
+            <a href="https://www.trycandle.app/">Company website</a>
+            <p>$130K - $180K</p>
+          </main>
+        </body>
+      </html>`,
+    expectedMarkdown: [
+      "# Company\nCandle",
+      "# Role\nGrowth Lead – Creator Program & Paid Social",
+      "We're looking for a Growth Lead to own Candle's creator program"
+    ]
   }
 ];
 
@@ -346,7 +382,7 @@ test("re-translates side panel UI when the language setting changes", async () =
     await expect(panelPage.locator("#language-label")).toHaveText("Idioma");
     await expect(panelPage.locator("#markdown")).toHaveAttribute(
       "placeholder",
-      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns o Ashby y actualiza para generar Markdown estructurado."
+      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby o Y Combinator y actualiza para generar Markdown estructurado."
     );
   } finally {
     await context.close();

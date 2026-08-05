@@ -243,6 +243,36 @@ describe("extractJob", () => {
     });
   });
 
+  it("extracts a Work at a Startup job page from YC metadata", async () => {
+    setPage("https://www.workatastartup.com/jobs/95982", `
+      <meta name="description" content="Relationships are the single greatest predictor of long-term health and happiness.
+
+The Role
+
+We're looking for a Growth Lead to own Candle's creator program, UGC engine, and creator community.
+
+Why Candle
+
+  - $130K–$180K depending on experience + equity
+">
+      <main>
+        <h1>Growth Lead – Creator Program & Paid Social</h1>
+        <a href="https://www.ycombinator.com/companies/candle">Candle</a>
+        <a href="https://www.trycandle.app/">Company website</a>
+        <p>$130K - $180K</p>
+      </main>
+    `, "Growth Lead – Creator Program & Paid Social at Candle | Y Combinator");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "yCombinator",
+      title: "Growth Lead – Creator Program & Paid Social",
+      company: "Candle",
+      website: "https://www.trycandle.app/",
+      salary: "$130K - $180K",
+      description: expect.stringContaining("We're looking for a Growth Lead to own Candle's creator program")
+    });
+  });
+
   it("rejects unsupported pages", async () => {
     setPage("https://example.com/jobs/123", "<h1>Unsupported</h1>", "Unsupported");
 

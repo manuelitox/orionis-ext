@@ -10,7 +10,9 @@
     "https://wellfound.com/jobs*",
     "https://bigremotejob.com/remote-jobs/*",
     "https://notyetunicorns.com/job/*",
-    "https://jobs.ashbyhq.com/*/*"
+    "https://jobs.ashbyhq.com/*/*",
+    "https://www.workatastartup.com/jobs/*",
+    "https://www.ycombinator.com/companies/*/jobs/*"
   ],
   "icons": {
     "16": "assets/icon-16.png",
@@ -38,7 +40,9 @@
         "https://wellfound.com/jobs*",
         "https://bigremotejob.com/remote-jobs/*",
         "https://notyetunicorns.com/job/*",
-        "https://jobs.ashbyhq.com/*/*"
+        "https://jobs.ashbyhq.com/*/*",
+        "https://www.workatastartup.com/jobs/*",
+        "https://www.ycombinator.com/companies/*/jobs/*"
       ],
       "js": ["src/content-script.js"]
     }

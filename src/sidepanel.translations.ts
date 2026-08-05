@@ -36,13 +36,14 @@ export class SidePanelTranslations {
       bigRemoteJob: this.t("errors.unsupported.bigremotejob"),
       notYetUnicorns: this.t("errors.unsupported.notyetunicorns"),
       ashby: this.t("errors.unsupported.ashby"),
+      yCombinator: this.t("errors.unsupported.ycombinator"),
       generic: this.t("errors.unsupported.generic")
     };
   }
 
   localizedErrorMessage(error: unknown, fallback: string): string {
     const message = error instanceof Error ? error.message : fallback;
-    const sourcePattern = "(LinkedIn|Wellfound|BigRemoteJob|Not Yet Unicorns|Ashby)";
+    const sourcePattern = "(LinkedIn|Wellfound|BigRemoteJob|Not Yet Unicorns|Ashby|Y Combinator)";
     const source = message.match(new RegExp(`^${sourcePattern}`))?.[1] || "";
 
     if (message === "This page is not a supported job posting.") {

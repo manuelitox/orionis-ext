@@ -11,6 +11,7 @@ import {
   extractTextAfterAshbyMetadata,
   extractTextBetween,
   extractWellfoundDescription,
+  extractYCombinatorDescription,
   expandLinkedInJobDescription,
   expandWellfoundJobDescription,
   findJobSource,
@@ -33,17 +34,22 @@ import {
   parseTitleFromDocument,
   parseWellfoundCompanyFromDocument,
   parseWellfoundTitleFromDocument,
+  parseYCombinatorCompanyFromDocument,
+  parseYCombinatorCompanySlug,
+  parseYCombinatorTitleFromDocument,
   salaryCurrencySymbol,
   scoreDescriptionCandidate,
   stripAshbyBoilerplate,
   stripBigRemoteJobBoilerplate,
   stripWellfoundBoilerplate,
+  stripYCombinatorBoilerplate,
   titleCaseSlug,
   validateAshbyJob,
   validateBigRemoteJob,
   validateCapturedJobContract,
   validateNotYetUnicornsJob,
-  wellfoundDescriptionEndPatterns
+  wellfoundDescriptionEndPatterns,
+  yCombinatorDescriptionEndPatterns
 } from "../src/content-script.js";
 import type { CapturedJob } from "../src/content-script.types.js";
 
@@ -92,6 +98,13 @@ describe("content script parser helpers", () => {
     expect(parseAshbyTitleFromDocument()).toBe("Staff Engineer");
     expect(parseAshbyCompanyFromDocument()).toBe("Orionis Labs");
     expect(parseAshbyJobBoardSlug()).toBe("orionis-labs");
+
+    setDocument("https://www.workatastartup.com/jobs/95982", "", "Growth Lead – Creator Program & Paid Social at Candle | Y Combinator");
+    expect(parseYCombinatorTitleFromDocument()).toBe("Growth Lead – Creator Program & Paid Social");
+    expect(parseYCombinatorCompanyFromDocument()).toBe("Candle");
+
+    setDocument("https://www.ycombinator.com/companies/candle/jobs/AzINRDn-growth-lead-creator-program-paid-social", "", "Role at Company | Y Combinator");
+    expect(parseYCombinatorCompanySlug()).toBe("candle");
   });
 
   it("parses BigRemoteJob meta fields", () => {
@@ -113,6 +126,9 @@ describe("content script parser helpers", () => {
 
     expect(stripAshbyBoilerplate("Overview\nBuild product.\nApply for this job\nForm")).toBe("Build product.");
     expect(stripAshbyBoilerplate("Application\nBuild product.\nApplication")).toBe("Build product.");
+
+    expect(stripYCombinatorBoilerplate("Build product.\nApply to role\nForm")).toBe("Build product.");
+    expect(stripYCombinatorBoilerplate("Build product.\nAbout the company\nIgnore")).toBe("Build product.");
   });
 
   it("extracts text sections for supported sources", () => {
@@ -121,6 +137,7 @@ describe("content script parser helpers", () => {
     expect(extractBigRemoteJobDescription("Intro\nYour team and role\nBuild product.\nRelated jobs:")).toBe("Build product.");
     expect(extractNotYetUnicornsDescription("Intro\nThe role\nBuild product.\nLocation\nRemote")).toBe("Build product.");
     expect(extractAshbyDescription("Intro\nOverview\nBuild product.\nApplication\nForm")).toBe("Build product.");
+    expect(extractYCombinatorDescription("Intro\nAbout the role\nBuild product.\nFounders\nIgnore")).toBe("Build product.");
     expect(extractTextBetween("A\nStart\nMiddle\nEnd\nZ", /^start$/i, [/^end$/i])).toBe("Middle");
     expect(extractTextBetween("A\nMiddle\nEnd", /^start$/i, [/^end$/i])).toBe("");
   });
@@ -173,6 +190,7 @@ Apply for this job`)).toBe("Build product reliability.");
     expect(bigRemoteJobDescriptionEndPatterns().some((pattern) => pattern.test("Website: https://example.com"))).toBe(true);
     expect(notYetUnicornsDescriptionEndPatterns().some((pattern) => pattern.test("Location"))).toBe(true);
     expect(ashbyDescriptionEndPatterns().some((pattern) => pattern.test("Submit application"))).toBe(true);
+    expect(yCombinatorDescriptionEndPatterns().some((pattern) => pattern.test("Apply to role"))).toBe(true);
   });
 
   it("clicks LinkedIn show-more buttons inside the description", async () => {
