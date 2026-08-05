@@ -4,6 +4,7 @@ import { buildRoleFilename, extractMarkdownSection, isSupportedJobUrl, unsupport
 const unsupportedJobPageMessages = {
   linkedIn: "This LinkedIn page is not a job post. Open a specific LinkedIn job detail page before capturing.",
   wellfound: "This Wellfound page is not a job post. Open a specific Wellfound job detail page before capturing.",
+  wellfoundJobListingSlug: "This Wellfound URL opens a mixed jobs view and can mix fields from multiple listings. Open the direct job detail URL instead:",
   bigRemoteJob: "This BigRemoteJob page is not a job post. Open a specific BigRemoteJob job detail page before capturing.",
   notYetUnicorns: "This Not Yet Unicorns page is not a job post. Open a specific Not Yet Unicorns job detail page before capturing.",
   ashby: "This Ashby page is not a valid job post. Open a specific Ashby job detail page before capturing.",
@@ -26,6 +27,7 @@ describe("isSupportedJobUrl", () => {
     expect(isSupportedJobUrl(undefined)).toBe(false);
     expect(isSupportedJobUrl("https://www.linkedin.com/company/acme")).toBe(false);
     expect(isSupportedJobUrl("https://wellfound.com/company/acme")).toBe(false);
+    expect(isSupportedJobUrl("https://wellfound.com/jobs?job_listing_slug=3548419-product-engineer-full-stack")).toBe(false);
     expect(isSupportedJobUrl("https://jobs.ashbyhq.com/acme/not-a-uuid")).toBe(false);
     expect(isSupportedJobUrl("https://www.workatastartup.com/jobs/not-a-number")).toBe(false);
   });
@@ -34,6 +36,7 @@ describe("isSupportedJobUrl", () => {
 describe("unsupportedJobPageMessage", () => {
   it("returns source-specific guidance for known non-job pages", () => {
     expect(unsupportedJobPageMessage("https://www.linkedin.com/feed/", unsupportedJobPageMessages)).toBe("This LinkedIn page is not a job post. Open a specific LinkedIn job detail page before capturing.");
+    expect(unsupportedJobPageMessage("https://wellfound.com/jobs?job_listing_slug=3548419-product-engineer-full-stack", unsupportedJobPageMessages)).toBe("This Wellfound URL opens a mixed jobs view and can mix fields from multiple listings. Open the direct job detail URL instead: https://wellfound.com/jobs/3548419-product-engineer-full-stack");
     expect(unsupportedJobPageMessage("https://wellfound.com/company/acme", unsupportedJobPageMessages)).toBe("This Wellfound page is not a job post. Open a specific Wellfound job detail page before capturing.");
     expect(unsupportedJobPageMessage("https://bigremotejob.com/", unsupportedJobPageMessages)).toBe("This BigRemoteJob page is not a job post. Open a specific BigRemoteJob job detail page before capturing.");
     expect(unsupportedJobPageMessage("https://notyetunicorns.com/", unsupportedJobPageMessages)).toBe("This Not Yet Unicorns page is not a job post. Open a specific Not Yet Unicorns job detail page before capturing.");

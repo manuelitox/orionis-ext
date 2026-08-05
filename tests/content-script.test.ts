@@ -102,6 +102,89 @@ describe("extractJob", () => {
     });
   });
 
+  it("extracts a Wellfound job when company link text is absent", async () => {
+    setPage("https://wellfound.com/jobs/3543496-staff-software-engineer-product-engineering-eu", `
+      <meta property="og:title" content="Staff Software Engineer, Product Engineering, EU at Ashby • Wellfound">
+      <main>
+        <a href="/company/ashby" aria-label="Ashby company profile">
+          <img alt="Ashby logo">
+        </a>
+        <h1>Staff Software Engineer, Product Engineering, EU</h1>
+        <a href="https://www.ashbyhq.com/">Website</a>
+        <p>€141k – €226k</p>
+        <section>
+          About the job
+          Build product engineering systems for recruiting teams.
+          About the company
+          Company boilerplate should not appear.
+        </section>
+      </main>
+    `, "Wellfound Jobs");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "Staff Software Engineer, Product Engineering, EU",
+      company: "Ashby",
+      salary: "€141k – €226k",
+      description: "Build product engineering systems for recruiting teams."
+    });
+  });
+
+  it("extracts a Wellfound company from nearby list text when structured company data is absent", async () => {
+    setPage("https://wellfound.com/jobs/3543496-staff-software-engineer-product-engineering-eu", `
+      <main>
+        <section>
+          <p>Ashby</p>
+          <p>Actively Hiring</p>
+          <h1>Staff Software Engineer, Product Engineering, EU</h1>
+          <p>€141k – €226k</p>
+          <div>
+            About the job
+            Build product engineering systems for recruiting teams.
+            About the company
+            Company boilerplate should not appear.
+          </div>
+        </section>
+      </main>
+    `, "Wellfound Jobs");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "Staff Software Engineer, Product Engineering, EU",
+      company: "Ashby",
+      salary: "€141k – €226k",
+      description: "Build product engineering systems for recruiting teams."
+    });
+  });
+
+  it("prefers the Wellfound salary range near the selected listing over unrelated amounts", async () => {
+    setPage("https://wellfound.com/jobs/3548419-product-engineer-full-stack", `
+      <main>
+        <section>
+          <p>$200</p>
+          <p>Product analytics credits from another listing.</p>
+          <p>SignalFlow</p>
+          <h1>Product Engineer, Full Stack</h1>
+          <p>€100k – €155k • 0.1% – 0.2%</p>
+          <div>
+            About the job
+            Build full-stack product workflows for startup teams.
+            About the company
+            Company boilerplate should not appear.
+          </div>
+        </section>
+      </main>
+    `, "Wellfound Jobs");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "Product Engineer, Full Stack",
+      company: "SignalFlow",
+      salary: "€100k – €155k • 0.1% – 0.2%",
+      description: "Build full-stack product workflows for startup teams."
+    });
+  });
+
   it("extracts a BigRemoteJob page", async () => {
     setPage("https://bigremotejob.com/remote-jobs/product-engineer", `
       <meta property="og:description" content="Company: Remote Co 🌎 Salary: $110k - $140k 💸">

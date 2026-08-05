@@ -5,6 +5,7 @@ export function isSupportedJobUrl(url: string | undefined): boolean {
 export type UnsupportedJobPageMessages = {
   linkedIn: string;
   wellfound: string;
+  wellfoundJobListingSlug: string;
   bigRemoteJob: string;
   notYetUnicorns: string;
   ashby: string;
@@ -15,6 +16,11 @@ export type UnsupportedJobPageMessages = {
 export function unsupportedJobPageMessage(url: string | undefined, messages: UnsupportedJobPageMessages): string {
   if (isLinkedInUrl(url)) {
     return messages.linkedIn;
+  }
+
+  const directWellfoundJobUrl = directWellfoundJobUrlFromListingSlug(url);
+  if (directWellfoundJobUrl) {
+    return `${messages.wellfoundJobListingSlug} ${directWellfoundJobUrl}`;
   }
 
   if (isWellfoundUrl(url)) {
@@ -64,11 +70,26 @@ function isLinkedInUrl(url: string | undefined): boolean {
 }
 
 function isWellfoundJobsUrl(url: string | undefined): boolean {
-  return /^https:\/\/wellfound\.com\/jobs(?:[/?#]|$)/.test(url || "");
+  return /^https:\/\/wellfound\.com\/jobs\/[^/?#]+\/?(?:[?#].*)?$/.test(url || "");
 }
 
 function isWellfoundUrl(url: string | undefined): boolean {
   return /^https:\/\/wellfound\.com\//.test(url || "");
+}
+
+function directWellfoundJobUrlFromListingSlug(url: string | undefined): string {
+  try {
+    const parsedUrl = new URL(url || "");
+    const slug = parsedUrl.searchParams.get("job_listing_slug") || "";
+
+    if (parsedUrl.hostname === "wellfound.com" && parsedUrl.pathname === "/jobs" && slug) {
+      return `https://wellfound.com/jobs/${slug}`;
+    }
+  } catch (_error) {
+    return "";
+  }
+
+  return "";
 }
 
 function isBigRemoteJobUrl(url: string | undefined): boolean {

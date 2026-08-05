@@ -17,7 +17,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     },
     {
       source: "wellfound",
-      urlPattern: /^https:\/\/wellfound\.com\/jobs(?:[/?#]|$)/,
+      urlPattern: /^https:\/\/wellfound\.com\/jobs\/[^/?#]+\/?(?:[?#].*)?$/,
       beforeExtract: expandWellfoundJobDescription,
       fields: {
         title: getWellfoundJobTitle,
@@ -306,12 +306,74 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
   function getWellfoundCompanyName() {
     return (
-      textFromFirst([
+      textFromBestWellfoundCompanyLink() ||
+      parseWellfoundCompanyFromMetadata() ||
+      parseWellfoundCompanyFromCompanyHref() ||
+      parseWellfoundCompanyNearTitle() ||
+      parseWellfoundCompanyFromDocument()
+    );
+  }
+
+  function textFromBestWellfoundCompanyLink() {
+    const candidates = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>([
         "main a[href^='/company/']",
         "main a[href*='wellfound.com/company/']",
         "article a[href^='/company/']",
-        "article a[href*='wellfound.com/company/']"
-      ]) || parseWellfoundCompanyFromDocument()
+        "article a[href*='wellfound.com/company/']",
+        "a[href^='/company/']",
+        "a[href*='wellfound.com/company/']"
+      ].join(", "))
+    )
+      .filter(isVisible)
+      .map((element) => cleanText(element.innerText || element.textContent || ""))
+      .filter((text) => text && text.length <= 80 && !/^(company|view company|profile|apply|save)$/i.test(text));
+
+    return candidates[0] || "";
+  }
+
+  function parseWellfoundCompanyFromCompanyHref() {
+    const companyLink = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>("a[href^='/company/'], a[href*='wellfound.com/company/']")
+    ).find((element) => isVisible(element) && wellfoundCompanySlugFromHref(element.href));
+
+    return titleCaseSlug(wellfoundCompanySlugFromHref(companyLink?.href || ""));
+  }
+
+  function parseWellfoundCompanyNearTitle() {
+    const title = getWellfoundJobTitle();
+    if (!title) {
+      return "";
+    }
+
+    const lines = cleanText(document.body?.innerText || "")
+      .split("\n")
+      .map((line) => cleanText(line))
+      .filter(Boolean);
+    const titleIndex = lines.findIndex((line) => line === title);
+
+    if (titleIndex === -1) {
+      return "";
+    }
+
+    for (let index = titleIndex - 1; index >= Math.max(0, titleIndex - 10); index -= 1) {
+      const line = lines[index];
+
+      if (isLikelyWellfoundCompanyLine(line)) {
+        return line;
+      }
+    }
+
+    return "";
+  }
+
+  function isLikelyWellfoundCompanyLine(line) {
+    return Boolean(
+      line &&
+      line.length <= 80 &&
+      !/^(act(ive)?ly hiring|save|apply|apply now|full-time|part-time|contract|internship|remote|onsite|hybrid)$/i.test(line) &&
+      !/\d+\s*(?:year|month|week|day)s?\s*(?:of exp|ago)?/i.test(line) &&
+      !/[$€£₹]\s?\d/.test(line)
     );
   }
 
@@ -355,7 +417,44 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
 
     return normalizeSalary(
-      firstSalaryMatch(headerText) || firstSalaryMatch(cleanText(document.body?.innerText || ""))
+      bestWellfoundSalaryMatch(textAroundWellfoundTitle()) ||
+      bestWellfoundSalaryMatch(headerText) ||
+      firstSalaryMatch(cleanText(document.body?.innerText || ""))
+    );
+  }
+
+  function textAroundWellfoundTitle() {
+    const title = getWellfoundJobTitle();
+    if (!title) {
+      return "";
+    }
+
+    const lines = cleanText(document.body?.innerText || "")
+      .split("\n")
+      .map((line) => cleanText(line))
+      .filter(Boolean);
+    const titleIndex = lines.findIndex((line) => line === title);
+
+    if (titleIndex === -1) {
+      return "";
+    }
+
+    return lines.slice(titleIndex, titleIndex + 12).join("\n");
+  }
+
+  function bestWellfoundSalaryMatch(text) {
+    const matches = salaryMatches(text);
+
+    return matches
+      .sort((first, second) => scoreWellfoundSalaryCandidate(second) - scoreWellfoundSalaryCandidate(first))[0] || "";
+  }
+
+  function scoreWellfoundSalaryCandidate(candidate) {
+    return (
+      Number(/[kKmM]\b/.test(candidate)) * 80 +
+      Number(/%/.test(candidate)) * 60 +
+      Number(/[–-]/.test(candidate)) * 30 -
+      Number(!/[kKmM%]/.test(candidate)) * 100
     );
   }
 
@@ -788,6 +887,41 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return cleanText(byBullet[1] || "");
   }
 
+  export function parseWellfoundCompanyFromMetadata() {
+    return cleanText(
+      companyFromTitleLikeText(document.querySelector<HTMLMetaElement>("meta[property='og:title']")?.content || "") ||
+      companyFromTitleLikeText(document.querySelector<HTMLMetaElement>("meta[name='title']")?.content || "") ||
+      companyFromTitleLikeText(document.title)
+    );
+  }
+
+  function companyFromTitleLikeText(value) {
+    const text = cleanText(value);
+    const atMatch = text.match(/\s+at\s+(.+?)(?:\s+[|•-]\s+Wellfound|\s+[|•]\s+.+)?$/i);
+
+    if (atMatch?.[1]) {
+      return cleanText(atMatch[1]);
+    }
+
+    const bulletParts = text.split("•").map((part) => cleanText(part));
+    if (/wellfound/i.test(bulletParts[bulletParts.length - 1] || "") && bulletParts.length > 2) {
+      return cleanText(bulletParts[bulletParts.length - 2]);
+    }
+
+    return "";
+  }
+
+  function wellfoundCompanySlugFromHref(href) {
+    try {
+      const url = new URL(href, window.location.href);
+      const [first, second] = url.pathname.split("/").filter(Boolean);
+
+      return first === "company" ? cleanText(second || "") : "";
+    } catch (_error) {
+      return "";
+    }
+  }
+
   export function parseBigRemoteJobTitleFromDocument() {
     const title = document.title.replace(/^Remote\s+/i, "").replace(/\s+at\s+.+$/i, "");
     return cleanText(title);
@@ -1171,11 +1305,18 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
   }
 
   export function firstSalaryMatch(text) {
-    const matches = String(text || "").match(
-      /(?:[$€£₹]\s?\d[\d.,]*\s?[kKmM]?(?:\s*[–-]\s*[$€£₹]?\s?\d[\d.,]*\s?[kKmM]?)?(?:\s*•\s*(?:no equity|[\d.,]+%\s*[–-]\s*[\d.,]+%))?)/i
-    );
+    const matches = salaryMatches(text);
 
-    return cleanText(matches?.[0] || "");
+    return cleanText(matches[0] || "");
+  }
+
+  function salaryMatches(text) {
+    return Array.from(
+      String(text || "").matchAll(
+        /(?:[$€£₹]\s?\d[\d.,]*\s?[kKmM]?(?:\s*[–-]\s*[$€£₹]?\s?\d[\d.,]*\s?[kKmM]?)?(?:\s*•\s*(?:no equity|[\d.,]+%\s*[–-]\s*[\d.,]+%))?)/gi
+      ),
+      (match) => cleanText(match[0])
+    ).filter(Boolean);
   }
 
   export function normalizeSalary(value) {

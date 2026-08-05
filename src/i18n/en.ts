@@ -39,6 +39,7 @@ export const en = {
   "errors.extract.missingDescription": "{source} page detected, but the JD body was empty. Expand the full description if needed, wait for the page to finish loading, then click Refresh in Orionis Capture.",
   "errors.unsupported.linkedin": "This LinkedIn page is not a job post. Open a specific LinkedIn job detail page before capturing.",
   "errors.unsupported.wellfound": "This Wellfound page is not a job post. Open a specific Wellfound job detail page before capturing.",
+  "errors.unsupported.wellfoundJobListingSlug": "This Wellfound URL opens a mixed jobs view and can mix fields from multiple listings. Open the direct job detail URL instead:",
   "errors.unsupported.bigremotejob": "This BigRemoteJob page is not a job post. Open a specific BigRemoteJob job detail page before capturing.",
   "errors.unsupported.notyetunicorns": "This Not Yet Unicorns page is not a job post. Open a specific Not Yet Unicorns job detail page before capturing.",
   "errors.unsupported.ashby": "This Ashby page is not a valid job post. Open a specific Ashby job detail page before capturing.",

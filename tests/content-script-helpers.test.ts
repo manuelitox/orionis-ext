@@ -31,6 +31,7 @@ import {
   parseJsonValue,
   parseNotYetUnicornsCompanyFromDocument,
   parseNotYetUnicornsTitleFromDocument,
+  parseWellfoundCompanyFromMetadata,
   parseTitleFromDocument,
   parseWellfoundCompanyFromDocument,
   parseWellfoundTitleFromDocument,
@@ -64,6 +65,7 @@ describe("content script parser helpers", () => {
     expect(findJobSource("https://bigremotejob.com/remote-jobs/role")?.source).toBe("bigRemoteJob");
     expect(findJobSource("https://notyetunicorns.com/job/role")?.source).toBe("notYetUnicorns");
     expect(findJobSource("https://jobs.ashbyhq.com/acme/123e4567-e89b-12d3-a456-426614174000")?.source).toBe("ashby");
+    expect(findJobSource("https://wellfound.com/jobs?job_listing_slug=3548419-product-engineer-full-stack")).toBeUndefined();
     expect(findJobSource("https://example.com/jobs/1")).toBeUndefined();
   });
 
@@ -85,6 +87,11 @@ describe("content script parser helpers", () => {
 
     setDocument("https://wellfound.com/jobs/1", "", "Product Designer • Startup Co");
     expect(parseWellfoundCompanyFromDocument()).toBe("Startup Co");
+
+    setDocument("https://wellfound.com/jobs?job_listing_slug=1-role", `
+      <meta property="og:title" content="Staff Software Engineer, Product Engineering, EU at Ashby • Wellfound">
+    `, "Wellfound Jobs");
+    expect(parseWellfoundCompanyFromMetadata()).toBe("Ashby");
 
     setDocument("https://bigremotejob.com/remote-jobs/product-engineer", "", "Remote Product Engineer at Remote Co");
     expect(parseBigRemoteJobTitleFromDocument()).toBe("Product Engineer");

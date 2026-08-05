@@ -33,6 +33,7 @@ export class SidePanelTranslations {
     return {
       linkedIn: this.t("errors.unsupported.linkedin"),
       wellfound: this.t("errors.unsupported.wellfound"),
+      wellfoundJobListingSlug: this.t("errors.unsupported.wellfoundJobListingSlug"),
       bigRemoteJob: this.t("errors.unsupported.bigremotejob"),
       notYetUnicorns: this.t("errors.unsupported.notyetunicorns"),
       ashby: this.t("errors.unsupported.ashby"),

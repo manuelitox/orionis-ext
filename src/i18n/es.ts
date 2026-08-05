@@ -41,6 +41,7 @@ export const es = {
   "errors.extract.missingDescription": "Página de {source} detectada, pero el cuerpo de la descripción estaba vacío. Expande la descripción completa si hace falta, espera a que la página termine de cargar y haz clic en Actualizar en Orionis Capture.",
   "errors.unsupported.linkedin": "Esta página de LinkedIn no es una oferta. Abre una página de detalle de una oferta de LinkedIn antes de capturar.",
   "errors.unsupported.wellfound": "Esta página de Wellfound no es una oferta. Abre una página de detalle de una oferta de Wellfound antes de capturar.",
+  "errors.unsupported.wellfoundJobListingSlug": "Esta URL de Wellfound abre una vista mixta de ofertas y puede mezclar campos de varios listings. Abre la URL directa del detalle de la oferta:",
   "errors.unsupported.bigremotejob": "Esta página de BigRemoteJob no es una oferta. Abre una página de detalle de una oferta de BigRemoteJob antes de capturar.",
   "errors.unsupported.notyetunicorns": "Esta página de Not Yet Unicorns no es una oferta. Abre una página de detalle de una oferta de Not Yet Unicorns antes de capturar.",
   "errors.unsupported.ashby": "Esta página de Ashby no es una oferta válida. Abre una página de detalle de una oferta de Ashby antes de capturar.",

@@ -347,6 +347,17 @@ test("preserves source and JD URL in a manual draft when capture cannot complete
     expect(markdown).toContain(`# JD URL\n${listPageUrl}`);
     expect(markdown).toContain("# Company\n\n\n# Role\n");
     expect(markdown).toContain("# JD\n\n\n# Notes\n");
+
+    const wellfoundSlugPanelPage = await context.newPage();
+    await openPanelForUrl(wellfoundSlugPanelPage, extensionId, "https://wellfound.com/jobs?job_listing_slug=3548419-product-engineer-full-stack");
+
+    await expect(wellfoundSlugPanelPage.locator("#status")).toHaveText(
+      "This Wellfound URL opens a mixed jobs view and can mix fields from multiple listings. Open the direct job detail URL instead: https://wellfound.com/jobs/3548419-product-engineer-full-stack"
+    );
+    const wellfoundSlugMarkdown = await wellfoundSlugPanelPage.locator("#markdown").inputValue();
+
+    expect(wellfoundSlugMarkdown).toContain("# Source\nwellfound.com");
+    expect(wellfoundSlugMarkdown).toContain("# JD URL\nhttps://wellfound.com/jobs?job_listing_slug=3548419-product-engineer-full-stack");
   } finally {
     await context.close();
   }
@@ -408,6 +419,12 @@ async function openPanelForJobTab(panelPage: Page, extensionId: string, tabUrlPa
     tabId: String(jobTab.id),
     url: jobTab.url
   });
+
+  await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html?${params.toString()}`);
+}
+
+async function openPanelForUrl(panelPage: Page, extensionId: string, url: string): Promise<void> {
+  const params = new URLSearchParams({ url });
 
   await panelPage.goto(`chrome-extension://${extensionId}/src/sidepanel.html?${params.toString()}`);
 }
