@@ -27,7 +27,7 @@ export const en = {
   "settings.languageSpanish": "Spanish",
   "editor.label": "Markdown",
   "editor.hint": "Editable draft",
-  "editor.placeholder": "Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, or Ashby job post, then refresh to generate structured Markdown.",
+  "editor.placeholder": "Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, or Y Combinator job post, then refresh to generate structured Markdown.",
   "errors.jobDataUnavailable": "Job data was not available on this page.",
   "errors.folderPermissionDenied": "Folder write permission was not granted.",
   "errors.noFilenameAvailable": "Could not find an available filename.",
@@ -39,8 +39,10 @@ export const en = {
   "errors.extract.missingDescription": "{source} page detected, but the JD body was empty. Expand the full description if needed, wait for the page to finish loading, then click Refresh in Orionis Capture.",
   "errors.unsupported.linkedin": "This LinkedIn page is not a job post. Open a specific LinkedIn job detail page before capturing.",
   "errors.unsupported.wellfound": "This Wellfound page is not a job post. Open a specific Wellfound job detail page before capturing.",
+  "errors.unsupported.wellfoundJobListingSlug": "This Wellfound URL opens a mixed jobs view and can mix fields from multiple listings. Open the direct job detail URL instead:",
   "errors.unsupported.bigremotejob": "This BigRemoteJob page is not a job post. Open a specific BigRemoteJob job detail page before capturing.",
   "errors.unsupported.notyetunicorns": "This Not Yet Unicorns page is not a job post. Open a specific Not Yet Unicorns job detail page before capturing.",
   "errors.unsupported.ashby": "This Ashby page is not a valid job post. Open a specific Ashby job detail page before capturing.",
-  "errors.unsupported.generic": "Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, or Ashby job page before capturing."
+  "errors.unsupported.ycombinator": "This Y Combinator page is not a job post. Open a specific Work at a Startup job detail page before capturing.",
+  "errors.unsupported.generic": "Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, or Y Combinator job page before capturing."
 } as const;

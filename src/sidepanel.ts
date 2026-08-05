@@ -1,6 +1,6 @@
 import { buildOrionisMarkdown, type OrionisMarkdownDraft } from "./markdown.template.js";
 import { SidePanelTranslations } from "./sidepanel.translations.js";
-import { buildRoleFilename, isSupportedJobUrl } from "./sidepanel.utils.js";
+import { buildRoleFilename, isSupportedJobUrl, unsupportedJobPageMessage } from "./sidepanel.utils.js";
 import type {
   ActiveTabMetadata,
   CapturedJob,
@@ -81,7 +81,10 @@ async function captureCurrentTab(): Promise<void> {
     const tab = await getActiveTab();
 
     if (!tab?.id || (tab.url && !isSupportedJobUrl(tab.url))) {
-      renderManualDraftForTab(tab, { preserveEdited: true });
+      renderManualDraftForTab(tab, {
+        preserveEdited: true,
+        statusMessage: unsupportedStatusMessage(tab?.url)
+      });
       return;
     }
 
@@ -107,14 +110,21 @@ async function renderManualDraftForCurrentTab(options: { preserveEdited: boolean
   renderManualDraftForTab(await getActiveTab(), options);
 }
 
-function renderManualDraftForTab(tab: ActiveTabMetadata | undefined, options: { preserveEdited: boolean }): void {
+function renderManualDraftForTab(tab: ActiveTabMetadata | undefined, options: { preserveEdited: boolean; statusMessage?: string }): void {
   if (options.preserveEdited && isEditorDirty()) {
     setStatus(t("status.editedDraftKept"));
     return;
   }
 
   setMarkdown(buildOrionisMarkdown(buildManualDraft(tab?.url)));
-  setStatus(t("status.manualDraftReady"), "success");
+  setStatus(options.statusMessage || t("status.manualDraftReady"), options.statusMessage ? "error" : "success");
+}
+
+function unsupportedStatusMessage(url: string | undefined): string | undefined {
+  const messages = translations.unsupportedJobPageMessages();
+  const message = unsupportedJobPageMessage(url, messages);
+
+  return message === messages.generic ? undefined : message;
 }
 
 function buildManualDraft(url: string | undefined): OrionisMarkdownDraft {

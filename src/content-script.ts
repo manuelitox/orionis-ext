@@ -17,7 +17,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     },
     {
       source: "wellfound",
-      urlPattern: /^https:\/\/wellfound\.com\/jobs(?:[/?#]|$)/,
+      urlPattern: /^https:\/\/wellfound\.com\/jobs\/[^/?#]+\/?(?:[?#].*)?$/,
       beforeExtract: expandWellfoundJobDescription,
       fields: {
         title: getWellfoundJobTitle,
@@ -58,6 +58,17 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
         website: getAshbyCompanyWebsite,
         salary: getAshbySalary,
         description: getAshbyJobDescription
+      }
+    },
+    {
+      source: "yCombinator",
+      urlPattern: /^https:\/\/(?:www\.workatastartup\.com\/jobs\/\d+|www\.ycombinator\.com\/companies\/[^/?#]+\/jobs\/[^/?#]+)\/?(?:[?#].*)?$/i,
+      fields: {
+        title: getYCombinatorJobTitle,
+        company: getYCombinatorCompanyName,
+        website: getYCombinatorCompanyWebsite,
+        salary: getYCombinatorSalary,
+        description: getYCombinatorJobDescription
       }
     }
   ];
@@ -175,6 +186,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       bigRemoteJob: "BigRemoteJob",
       linkedIn: "LinkedIn",
       notYetUnicorns: "Not Yet Unicorns",
+      yCombinator: "Y Combinator",
       wellfound: "Wellfound"
     };
 
@@ -294,12 +306,74 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
   function getWellfoundCompanyName() {
     return (
-      textFromFirst([
+      textFromBestWellfoundCompanyLink() ||
+      parseWellfoundCompanyFromMetadata() ||
+      parseWellfoundCompanyFromCompanyHref() ||
+      parseWellfoundCompanyNearTitle() ||
+      parseWellfoundCompanyFromDocument()
+    );
+  }
+
+  function textFromBestWellfoundCompanyLink() {
+    const candidates = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>([
         "main a[href^='/company/']",
         "main a[href*='wellfound.com/company/']",
         "article a[href^='/company/']",
-        "article a[href*='wellfound.com/company/']"
-      ]) || parseWellfoundCompanyFromDocument()
+        "article a[href*='wellfound.com/company/']",
+        "a[href^='/company/']",
+        "a[href*='wellfound.com/company/']"
+      ].join(", "))
+    )
+      .filter(isVisible)
+      .map((element) => cleanText(element.innerText || element.textContent || ""))
+      .filter((text) => text && text.length <= 80 && !/^(company|view company|profile|apply|save)$/i.test(text));
+
+    return candidates[0] || "";
+  }
+
+  function parseWellfoundCompanyFromCompanyHref() {
+    const companyLink = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>("a[href^='/company/'], a[href*='wellfound.com/company/']")
+    ).find((element) => isVisible(element) && wellfoundCompanySlugFromHref(element.href));
+
+    return titleCaseSlug(wellfoundCompanySlugFromHref(companyLink?.href || ""));
+  }
+
+  function parseWellfoundCompanyNearTitle() {
+    const title = getWellfoundJobTitle();
+    if (!title) {
+      return "";
+    }
+
+    const lines = cleanText(document.body?.innerText || "")
+      .split("\n")
+      .map((line) => cleanText(line))
+      .filter(Boolean);
+    const titleIndex = lines.findIndex((line) => line === title);
+
+    if (titleIndex === -1) {
+      return "";
+    }
+
+    for (let index = titleIndex - 1; index >= Math.max(0, titleIndex - 10); index -= 1) {
+      const line = lines[index];
+
+      if (isLikelyWellfoundCompanyLine(line)) {
+        return line;
+      }
+    }
+
+    return "";
+  }
+
+  function isLikelyWellfoundCompanyLine(line) {
+    return Boolean(
+      line &&
+      line.length <= 80 &&
+      !/^(act(ive)?ly hiring|save|apply|apply now|full-time|part-time|contract|internship|remote|onsite|hybrid)$/i.test(line) &&
+      !/\d+\s*(?:year|month|week|day)s?\s*(?:of exp|ago)?/i.test(line) &&
+      !/[$€£₹]\s?\d/.test(line)
     );
   }
 
@@ -343,7 +417,44 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
 
     return normalizeSalary(
-      firstSalaryMatch(headerText) || firstSalaryMatch(cleanText(document.body?.innerText || ""))
+      bestWellfoundSalaryMatch(textAroundWellfoundTitle()) ||
+      bestWellfoundSalaryMatch(headerText) ||
+      firstSalaryMatch(cleanText(document.body?.innerText || ""))
+    );
+  }
+
+  function textAroundWellfoundTitle() {
+    const title = getWellfoundJobTitle();
+    if (!title) {
+      return "";
+    }
+
+    const lines = cleanText(document.body?.innerText || "")
+      .split("\n")
+      .map((line) => cleanText(line))
+      .filter(Boolean);
+    const titleIndex = lines.findIndex((line) => line === title);
+
+    if (titleIndex === -1) {
+      return "";
+    }
+
+    return lines.slice(titleIndex, titleIndex + 12).join("\n");
+  }
+
+  function bestWellfoundSalaryMatch(text) {
+    const matches = salaryMatches(text);
+
+    return matches
+      .sort((first, second) => scoreWellfoundSalaryCandidate(second) - scoreWellfoundSalaryCandidate(first))[0] || "";
+  }
+
+  function scoreWellfoundSalaryCandidate(candidate) {
+    return (
+      Number(/[kKmM]\b/.test(candidate)) * 80 +
+      Number(/%/.test(candidate)) * 60 +
+      Number(/[–-]/.test(candidate)) * 30 -
+      Number(!/[kKmM%]/.test(candidate)) * 100
     );
   }
 
@@ -616,6 +727,64 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return stripAshbyBoilerplate(extractAshbyDescription(pageText) || pageText);
   }
 
+  function getYCombinatorJobTitle() {
+    return (
+      textFromFirst([
+        "main h1",
+        "article h1",
+        "h1"
+      ]) || parseYCombinatorTitleFromDocument()
+    );
+  }
+
+  function getYCombinatorCompanyName() {
+    return (
+      parseYCombinatorCompanyFromDocument() ||
+      textFromFirst([
+        "a[href^='/companies/'] h1",
+        "a[href^='/companies/']",
+        "main h2",
+        "aside h2"
+      ]) ||
+      titleCaseSlug(parseYCombinatorCompanySlug())
+    );
+  }
+
+  function getYCombinatorCompanyWebsite() {
+    return (
+      hrefFromFirst([
+        "a[href^='http'][aria-label*='website' i]",
+        "a[href^='http']"
+      ], isExternalWebsiteHref) || ""
+    );
+  }
+
+  function getYCombinatorSalary() {
+    return normalizeSalary(firstSalaryMatch(cleanText(document.body?.innerText || getYCombinatorMetaDescription())));
+  }
+
+  function getYCombinatorJobDescription() {
+    const metaDescription = getYCombinatorMetaDescription();
+
+    if (metaDescription) {
+      return stripYCombinatorBoilerplate(metaDescription);
+    }
+
+    const descriptionRoot = bestTextElement([
+      "main article",
+      "main [class*='prose']",
+      "main [class*='whitespace-pre-line']",
+      "main [class*='job']",
+      "article",
+      "main"
+    ]);
+
+    return stripYCombinatorBoilerplate(
+      extractYCombinatorDescription(cleanText(descriptionRoot?.innerText || descriptionRoot?.textContent || "")) ||
+      cleanText(descriptionRoot?.innerText || descriptionRoot?.textContent || "")
+    );
+  }
+
   function textFromFirst(selectors: string[]): string {
     const element = firstVisibleElement(selectors);
     return cleanText(element?.innerText || element?.textContent || "");
@@ -718,6 +887,41 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return cleanText(byBullet[1] || "");
   }
 
+  export function parseWellfoundCompanyFromMetadata() {
+    return cleanText(
+      companyFromTitleLikeText(document.querySelector<HTMLMetaElement>("meta[property='og:title']")?.content || "") ||
+      companyFromTitleLikeText(document.querySelector<HTMLMetaElement>("meta[name='title']")?.content || "") ||
+      companyFromTitleLikeText(document.title)
+    );
+  }
+
+  function companyFromTitleLikeText(value) {
+    const text = cleanText(value);
+    const atMatch = text.match(/\s+at\s+(.+?)(?:\s+[|•-]\s+Wellfound|\s+[|•]\s+.+)?$/i);
+
+    if (atMatch?.[1]) {
+      return cleanText(atMatch[1]);
+    }
+
+    const bulletParts = text.split("•").map((part) => cleanText(part));
+    if (/wellfound/i.test(bulletParts[bulletParts.length - 1] || "") && bulletParts.length > 2) {
+      return cleanText(bulletParts[bulletParts.length - 2]);
+    }
+
+    return "";
+  }
+
+  function wellfoundCompanySlugFromHref(href) {
+    try {
+      const url = new URL(href, window.location.href);
+      const [first, second] = url.pathname.split("/").filter(Boolean);
+
+      return first === "company" ? cleanText(second || "") : "";
+    } catch (_error) {
+      return "";
+    }
+  }
+
   export function parseBigRemoteJobTitleFromDocument() {
     const title = document.title.replace(/^Remote\s+/i, "").replace(/\s+at\s+.+$/i, "");
     return cleanText(title);
@@ -750,6 +954,26 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
   export function parseAshbyJobBoardSlug() {
     return cleanText(new URL(window.location.href).pathname.split("/").filter(Boolean)[0] || "");
+  }
+
+  export function parseYCombinatorTitleFromDocument() {
+    const title = document.title.split(" at ")[0]?.trim() || document.title;
+    return cleanText(title.replace(/\s+\|\s+Y Combinator$/i, ""));
+  }
+
+  export function parseYCombinatorCompanyFromDocument() {
+    const titleMatch = document.title.match(/\s+at\s+(.+?)\s*(?:\|\s*Y Combinator)?$/i);
+    if (titleMatch?.[1]) {
+      return cleanText(titleMatch[1]);
+    }
+
+    const metaTitle = cleanText(document.querySelector<HTMLMetaElement>("meta[name='title']")?.content || "");
+    const metaMatch = metaTitle.match(/\s+at\s+(.+?)\s*(?:\|\s*Y Combinator)?$/i);
+    return cleanText(metaMatch?.[1] || "");
+  }
+
+  export function parseYCombinatorCompanySlug() {
+    return cleanText(new URL(window.location.href).pathname.split("/").filter(Boolean)[1] || "");
   }
 
   export function parseBigRemoteJobMetaField(label) {
@@ -827,6 +1051,15 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
+  export function stripYCombinatorBoilerplate(text) {
+    return cleanText(
+      text
+        .replace(/\n?apply to role[\s\S]*$/i, "")
+        .replace(/\n?apply now[\s\S]*$/i, "")
+        .replace(/\n?about the company[\s\S]*$/i, "")
+    );
+  }
+
   export function extractWellfoundDescription(text) {
     return (
       extractTextBetween(text, /about the job/i, wellfoundDescriptionEndPatterns()) ||
@@ -855,6 +1088,14 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       extractTextBetween(text, /^overview$/i, ashbyDescriptionEndPatterns()) ||
       extractTextBetween(text, /^(about|about us|the role|job description)$/i, ashbyDescriptionEndPatterns()) ||
       extractTextAfterAshbyMetadata(text)
+    );
+  }
+
+  export function extractYCombinatorDescription(text) {
+    return (
+      extractTextBetween(text, /^(about the role|the role|job description)$/i, yCombinatorDescriptionEndPatterns()) ||
+      extractTextBetween(text, /^about .+$/i, yCombinatorDescriptionEndPatterns()) ||
+      ""
     );
   }
 
@@ -919,6 +1160,24 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       /^apply for this job$/i,
       /^submit application$/i
     ];
+  }
+
+  export function yCombinatorDescriptionEndPatterns() {
+    return [
+      /^apply to role$/i,
+      /^apply now$/i,
+      /^about the company$/i,
+      /^founders$/i,
+      /^company$/i
+    ];
+  }
+
+  function getYCombinatorMetaDescription() {
+    return cleanText(
+      document.querySelector<HTMLMetaElement>("meta[name='description']")?.content ||
+      document.querySelector<HTMLMetaElement>("meta[property='og:description']")?.content ||
+      ""
+    );
   }
 
   export function extractTextAfterAshbyMetadata(text) {
@@ -1046,11 +1305,18 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
   }
 
   export function firstSalaryMatch(text) {
-    const matches = String(text || "").match(
-      /(?:[$€£₹]\s?\d[\d.,]*\s?[kKmM]?(?:\s*[–-]\s*[$€£₹]?\s?\d[\d.,]*\s?[kKmM]?)?(?:\s*•\s*(?:no equity|[\d.,]+%\s*[–-]\s*[\d.,]+%))?)/i
-    );
+    const matches = salaryMatches(text);
 
-    return cleanText(matches?.[0] || "");
+    return cleanText(matches[0] || "");
+  }
+
+  function salaryMatches(text) {
+    return Array.from(
+      String(text || "").matchAll(
+        /(?:[$€£₹]\s?\d[\d.,]*\s?[kKmM]?(?:\s*[–-]\s*[$€£₹]?\s?\d[\d.,]*\s?[kKmM]?)?(?:\s*•\s*(?:no equity|[\d.,]+%\s*[–-]\s*[\d.,]+%))?)/gi
+      ),
+      (match) => cleanText(match[0])
+    ).filter(Boolean);
   }
 
   export function normalizeSalary(value) {
@@ -1076,7 +1342,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return Boolean(
       href &&
       /^https?:\/\//.test(href) &&
-      !/linkedin\.com|wellfound\.com|bigremotejob\.com|notyetunicorns\.com|ashbyhq\.com/.test(href)
+      !/linkedin\.com|wellfound\.com|bigremotejob\.com|notyetunicorns\.com|ashbyhq\.com|ycombinator\.com/.test(href)
     );
   }
 

@@ -3,7 +3,8 @@ export type JobSource =
   | "wellfound"
   | "bigRemoteJob"
   | "notYetUnicorns"
-  | "ashby";
+  | "ashby"
+  | "yCombinator";
 
 export interface CapturedJob {
   source: JobSource;

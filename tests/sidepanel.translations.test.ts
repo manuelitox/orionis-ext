@@ -37,7 +37,7 @@ describe("SidePanelTranslations", () => {
     expect(document.querySelector(".toolbar")?.getAttribute("aria-label")).toBe("Acciones de captura");
     expect(document.querySelector("button span")?.textContent).toBe("Copiar");
     expect(document.querySelector("#markdown")?.getAttribute("placeholder")).toBe(
-      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns o Ashby y actualiza para generar Markdown estructurado."
+      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby o Y Combinator y actualiza para generar Markdown estructurado."
     );
   });
 
@@ -75,6 +75,9 @@ describe("SidePanelTranslations", () => {
 
     expect(translations.unsupportedJobPageMessages().linkedIn).toBe(
       "Esta página de LinkedIn no es una oferta. Abre una página de detalle de una oferta de LinkedIn antes de capturar."
+    );
+    expect(translations.unsupportedJobPageMessages().yCombinator).toBe(
+      "Esta página de Y Combinator no es una oferta. Abre una página de detalle de Work at a Startup antes de capturar."
     );
   });
 
@@ -117,6 +120,12 @@ describe("SidePanelTranslations", () => {
         "fallback"
       )
     ).toContain("descripción estaba vacío");
+    expect(
+      translations.localizedErrorMessage(
+        new Error("Y Combinator page detected, but the role title was not found. Open the job detail page and wait for the full posting to load before capturing."),
+        "fallback"
+      )
+    ).toContain("no se encontró el título");
   });
 
   it("returns unknown errors and fallback text unchanged", () => {
