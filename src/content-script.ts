@@ -408,8 +408,8 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       "[class*=' styles_subheader__']"
     ]);
 
-    if (directSalary && /[$€£₹]/.test(directSalary)) {
-      return normalizeSalary(directSalary);
+    if (isWellfoundSalaryCandidate(directSalary)) {
+      return normalizeSalary(firstSalaryMatch(directSalary));
     }
 
     const headerText = cleanText(
@@ -447,6 +447,18 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
     return matches
       .sort((first, second) => scoreWellfoundSalaryCandidate(second) - scoreWellfoundSalaryCandidate(first))[0] || "";
+  }
+
+  function isWellfoundSalaryCandidate(text) {
+    const salary = firstSalaryMatch(text);
+
+    return Boolean(
+      salary && (
+        /\b(?:salary|compensation|pay)\b/i.test(text) ||
+        /[kKmM]\b/.test(salary) ||
+        /[–-]\s*[$€£₹]?\s*\d/.test(salary)
+      )
+    );
   }
 
   function scoreWellfoundSalaryCandidate(candidate) {
