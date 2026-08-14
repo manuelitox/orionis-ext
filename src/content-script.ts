@@ -413,14 +413,25 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     }
 
     const headerText = cleanText(
-      firstVisibleElement(["main", "article", "[role='main']"])?.innerText || ""
+      wellfoundSalarySearchText(firstVisibleElement(["main", "article", "[role='main']"]))
     );
 
     return normalizeSalary(
       bestWellfoundSalaryMatch(textAroundWellfoundTitle()) ||
       bestWellfoundSalaryMatch(headerText) ||
-      firstSalaryMatch(cleanText(document.body?.innerText || ""))
+      bestWellfoundSalaryMatch(wellfoundSalarySearchText(document.body))
     );
+  }
+
+  function wellfoundSalarySearchText(element) {
+    if (!element) {
+      return "";
+    }
+
+    const sanitizedElement = element.cloneNode(true) as HTMLElement;
+    sanitizedElement.querySelectorAll("[data-test='CandidateReferralWidget']").forEach((widget) => widget.remove());
+
+    return cleanText(sanitizedElement.innerText || sanitizedElement.textContent || "");
   }
 
   function textAroundWellfoundTitle() {
@@ -429,7 +440,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       return "";
     }
 
-    const lines = cleanText(document.body?.innerText || "")
+    const lines = wellfoundSalarySearchText(document.body)
       .split("\n")
       .map((line) => cleanText(line))
       .filter(Boolean);
@@ -443,7 +454,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
   }
 
   function bestWellfoundSalaryMatch(text) {
-    const matches = salaryMatches(text);
+    const matches = salaryMatches(text).filter(isWellfoundSalaryCandidate);
 
     return matches
       .sort((first, second) => scoreWellfoundSalaryCandidate(second) - scoreWellfoundSalaryCandidate(first))[0] || "";
