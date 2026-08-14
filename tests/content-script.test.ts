@@ -185,6 +185,31 @@ describe("extractJob", () => {
     });
   });
 
+  it("ignores a Wellfound referral bonus in the salary subheader", async () => {
+    setPage("https://wellfound.com/jobs/3548419-product-engineer-full-stack", `
+      <main>
+        <section>
+          <p>SignalFlow</p>
+          <h1>Product Engineer, Full Stack</h1>
+          <p class="styles_subheader__DfKjh">Refer a friend — earn $200</p>
+          <p>€100k – €155k • 0.1% – 0.2%</p>
+          <div>
+            About the job
+            Build full-stack product workflows for startup teams.
+            About the company
+            Company boilerplate should not appear.
+          </div>
+        </section>
+      </main>
+    `, "Wellfound Jobs");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "Product Engineer, Full Stack",
+      salary: "€100k – €155k • 0.1% – 0.2%"
+    });
+  });
+
   it("extracts a BigRemoteJob page", async () => {
     setPage("https://bigremotejob.com/remote-jobs/product-engineer", `
       <meta property="og:description" content="Company: Remote Co 🌎 Salary: $110k - $140k 💸">
