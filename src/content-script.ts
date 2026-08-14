@@ -408,19 +408,22 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       "[class*=' styles_subheader__']"
     ]);
 
-    if (directSalary && /[$€£₹]/.test(directSalary)) {
-      return normalizeSalary(directSalary);
+    if (isWellfoundSalaryCandidate(directSalary)) {
+      return normalizeSalary(firstSalaryMatch(directSalary));
     }
 
-    const headerText = cleanText(
-      firstVisibleElement(["main", "article", "[role='main']"])?.innerText || ""
-    );
+    return normalizeSalary(bestWellfoundSalaryMatch(textAroundWellfoundTitle()));
+  }
 
-    return normalizeSalary(
-      bestWellfoundSalaryMatch(textAroundWellfoundTitle()) ||
-      bestWellfoundSalaryMatch(headerText) ||
-      firstSalaryMatch(cleanText(document.body?.innerText || ""))
-    );
+  function wellfoundSalarySearchText(element) {
+    if (!element) {
+      return "";
+    }
+
+    const sanitizedElement = element.cloneNode(true) as HTMLElement;
+    sanitizedElement.querySelectorAll("[data-test='CandidateReferralWidget']").forEach((widget) => widget.remove());
+
+    return cleanText(sanitizedElement.innerText || sanitizedElement.textContent || "");
   }
 
   function textAroundWellfoundTitle() {
@@ -429,7 +432,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       return "";
     }
 
-    const lines = cleanText(document.body?.innerText || "")
+    const lines = wellfoundSalarySearchText(document.body)
       .split("\n")
       .map((line) => cleanText(line))
       .filter(Boolean);
@@ -439,14 +442,31 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       return "";
     }
 
-    return lines.slice(titleIndex, titleIndex + 12).join("\n");
+    const jobHeaderLines = lines.slice(titleIndex);
+    const jobDetailsIndex = jobHeaderLines.findIndex(
+      (line, index) => index > 0 && /^(?:about the job|job description|the role|similar jobs)$/i.test(line)
+    );
+
+    return jobHeaderLines.slice(0, jobDetailsIndex === -1 ? 12 : jobDetailsIndex).join("\n");
   }
 
   function bestWellfoundSalaryMatch(text) {
-    const matches = salaryMatches(text);
+    const matches = salaryMatches(text).filter(isWellfoundSalaryCandidate);
 
     return matches
       .sort((first, second) => scoreWellfoundSalaryCandidate(second) - scoreWellfoundSalaryCandidate(first))[0] || "";
+  }
+
+  export function isWellfoundSalaryCandidate(text) {
+    const salary = firstSalaryMatch(text);
+
+    return Boolean(
+      salary && (
+        /\b(?:salary|compensation|pay)\b/i.test(text) ||
+        /[kKmM]\b/.test(salary) ||
+        /[–-]\s*[$€£₹]?\s*\d/.test(salary)
+      )
+    );
   }
 
   function scoreWellfoundSalaryCandidate(candidate) {

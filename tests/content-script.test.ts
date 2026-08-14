@@ -185,6 +185,93 @@ describe("extractJob", () => {
     });
   });
 
+  it("ignores a Wellfound referral bonus in the salary subheader", async () => {
+    setPage("https://wellfound.com/jobs/3548419-product-engineer-full-stack", `
+      <main>
+        <section>
+          <p>SignalFlow</p>
+          <h1>Product Engineer, Full Stack</h1>
+          <p class="styles_subheader__DfKjh">Refer a friend — earn $200</p>
+          <p>€100k – €155k • 0.1% – 0.2%</p>
+          <div>
+            About the job
+            Build full-stack product workflows for startup teams.
+            About the company
+            Company boilerplate should not appear.
+          </div>
+        </section>
+      </main>
+    `, "Wellfound Jobs");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "Product Engineer, Full Stack",
+      salary: "€100k – €155k • 0.1% – 0.2%"
+    });
+  });
+
+  it("does not treat the Wellfound referral widget as salary when no salary is published", async () => {
+    setPage("https://wellfound.com/jobs/3915700-ai-ops-engineer-immediate-start", `
+      <main>
+        <section>
+          <p>Ideawise</p>
+          <h1>AI OPS Engineer (✨immediate start ✨)</h1>
+          <div class="styles_widget__pZ2bH" data-test="CandidateReferralWidget">
+            <div class="cursor-pointer" role="button" tabindex="0">
+              <div class="styles_widgetIcon__49dxb">
+                <p>Refer a friend</p>
+                <p>Earn $200</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            About the job
+            Build the AI operating layer for every team.
+            About the company
+            Company boilerplate should not appear.
+          </div>
+        </section>
+      </main>
+    `, "AI OPS Engineer (✨immediate start ✨) at Ideawise • Wellfound");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "AI OPS Engineer (✨immediate start ✨)",
+      salary: ""
+    });
+  });
+
+  it("does not treat salaries from Wellfound similar jobs as the current job salary", async () => {
+    setPage("https://wellfound.com/jobs/3915700-ai-ops-engineer-immediate-start", `
+      <main>
+        <section>
+          <p>Ideawise</p>
+          <h1>AI OPS Engineer (✨immediate start ✨)</h1>
+          <p>No equity</p>
+          <div>
+            About the job
+            Build the AI operating layer for every team.
+            About the company
+            Company boilerplate should not appear.
+          </div>
+        </section>
+        <section>
+          <h2>Similar Jobs</h2>
+          <article>
+            <h3>Senior Frontend Engineer</h3>
+            <p>$70k – $90k • 0.001% – 0.01%</p>
+          </article>
+        </section>
+      </main>
+    `, "AI OPS Engineer (✨immediate start ✨) at Ideawise • Wellfound");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "AI OPS Engineer (✨immediate start ✨)",
+      salary: ""
+    });
+  });
+
   it("extracts a BigRemoteJob page", async () => {
     setPage("https://bigremotejob.com/remote-jobs/product-engineer", `
       <meta property="og:description" content="Company: Remote Co 🌎 Salary: $110k - $140k 💸">
