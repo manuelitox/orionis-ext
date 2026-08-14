@@ -449,7 +449,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       .sort((first, second) => scoreWellfoundSalaryCandidate(second) - scoreWellfoundSalaryCandidate(first))[0] || "";
   }
 
-  function isWellfoundSalaryCandidate(text) {
+  export function isWellfoundSalaryCandidate(text) {
     const salary = firstSalaryMatch(text);
 
     return Boolean(

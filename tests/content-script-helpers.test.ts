@@ -19,6 +19,7 @@ import {
   formatCompactSalaryNumber,
   formatNotYetUnicornsSchemaSalary,
   isExternalWebsiteHref,
+  isWellfoundSalaryCandidate,
   normalizeSalary,
   notYetUnicornsDescriptionEndPatterns,
   parseAshbyCompanyFromDocument,
@@ -174,6 +175,14 @@ Apply for this job`)).toBe("Build product reliability.");
     expect(salaryCurrencySymbol("JPY")).toBe("JPY");
     expect(formatCompactSalaryNumber(1234)).toBe("1234");
     expect(formatCompactSalaryNumber("unknown")).toBe("unknown");
+  });
+
+  it("recognizes Wellfound compensation-shaped salary candidates", () => {
+    expect(isWellfoundSalaryCandidate("$120k")).toBe(true);
+    expect(isWellfoundSalaryCandidate("$120k - $150k")).toBe(true);
+    expect(isWellfoundSalaryCandidate("Salary: $95000")).toBe(true);
+    expect(isWellfoundSalaryCandidate("Refer a friend — earn $200")).toBe(false);
+    expect(isWellfoundSalaryCandidate("Sign-on bonus: $500")).toBe(false);
   });
 
   it("normalizes text, URLs, and scoring helpers", () => {
