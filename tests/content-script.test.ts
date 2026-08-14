@@ -241,6 +241,37 @@ describe("extractJob", () => {
     });
   });
 
+  it("does not treat salaries from Wellfound similar jobs as the current job salary", async () => {
+    setPage("https://wellfound.com/jobs/3915700-ai-ops-engineer-immediate-start", `
+      <main>
+        <section>
+          <p>Ideawise</p>
+          <h1>AI OPS Engineer (✨immediate start ✨)</h1>
+          <p>No equity</p>
+          <div>
+            About the job
+            Build the AI operating layer for every team.
+            About the company
+            Company boilerplate should not appear.
+          </div>
+        </section>
+        <section>
+          <h2>Similar Jobs</h2>
+          <article>
+            <h3>Senior Frontend Engineer</h3>
+            <p>$70k – $90k • 0.001% – 0.01%</p>
+          </article>
+        </section>
+      </main>
+    `, "AI OPS Engineer (✨immediate start ✨) at Ideawise • Wellfound");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "wellfound",
+      title: "AI OPS Engineer (✨immediate start ✨)",
+      salary: ""
+    });
+  });
+
   it("extracts a BigRemoteJob page", async () => {
     setPage("https://bigremotejob.com/remote-jobs/product-engineer", `
       <meta property="og:description" content="Company: Remote Co 🌎 Salary: $110k - $140k 💸">

@@ -412,15 +412,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       return normalizeSalary(firstSalaryMatch(directSalary));
     }
 
-    const headerText = cleanText(
-      wellfoundSalarySearchText(firstVisibleElement(["main", "article", "[role='main']"]))
-    );
-
-    return normalizeSalary(
-      bestWellfoundSalaryMatch(textAroundWellfoundTitle()) ||
-      bestWellfoundSalaryMatch(headerText) ||
-      bestWellfoundSalaryMatch(wellfoundSalarySearchText(document.body))
-    );
+    return normalizeSalary(bestWellfoundSalaryMatch(textAroundWellfoundTitle()));
   }
 
   function wellfoundSalarySearchText(element) {
@@ -450,7 +442,12 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       return "";
     }
 
-    return lines.slice(titleIndex, titleIndex + 12).join("\n");
+    const jobHeaderLines = lines.slice(titleIndex);
+    const jobDetailsIndex = jobHeaderLines.findIndex(
+      (line, index) => index > 0 && /^(?:about the job|job description|the role|similar jobs)$/i.test(line)
+    );
+
+    return jobHeaderLines.slice(0, jobDetailsIndex === -1 ? 12 : jobDetailsIndex).join("\n");
   }
 
   function bestWellfoundSalaryMatch(text) {
