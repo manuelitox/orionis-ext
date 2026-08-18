@@ -716,12 +716,8 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
   }
 
   function getAshbySalary() {
-    const compensationText = textNearHeading(/compensation|salary|pay range/i);
-
-    return normalizeSalary(
-      firstSalaryMatch(compensationText) ||
-      firstSalaryMatch(cleanText(document.body?.innerText || ""))
-    );
+    const compensationText = textImmediatelyAfterHeading(/^compensation$/i);
+    return normalizeSalary(salaryMatches(compensationText).join(" • "));
   }
 
   function getAshbyJobDescription() {
@@ -1252,6 +1248,13 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     }
 
     return cleanText(`${heading.innerText || heading.textContent || ""}\n${collectSectionText(heading)}`);
+  }
+
+  function textImmediatelyAfterHeading(pattern) {
+    const heading = findHeadingElement(pattern);
+    const content = heading?.nextElementSibling as HTMLElement | null;
+
+    return cleanText(content?.innerText || content?.textContent || "");
   }
 
   function getNotYetUnicornsNextData() {
