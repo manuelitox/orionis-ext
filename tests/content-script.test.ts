@@ -413,6 +413,61 @@ describe("extractJob", () => {
     });
   });
 
+  it("uses the ranges in Ashby's compensation section instead of amounts in the description", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+
+    setPage("https://jobs.ashbyhq.com/phantom/e7b83c02-55c2-4037-9209-93deb3b7492c", `
+      <main>
+        <h1>Senior Software Engineer, Frontend</h1>
+        <h2>Compensation</h2>
+        <p>Base salary: $180,000 - $220,000</p>
+        <section data-testid="job-description">
+          We offer a $180,000 to $220,000 base salary, plus a $1 referral bonus. This description deliberately contains enough detail to be selected as the job description.
+        </section>
+      </main>
+    `, "Senior Software Engineer, Frontend @ Phantom | Ashby");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      salary: "$180,000 - $220,000",
+      description: "We offer a $180,000 to $220,000 base salary, plus a $1 referral bonus. This description deliberately contains enough detail to be selected as the job description."
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps every salary range shown in Ashby's compensation section", async () => {
+    setPage("https://jobs.ashbyhq.com/ramp/f2ad6068-02e7-4986-967e-804ecef9e043", `
+      <main>
+        <h1>Financial Partnerships Manager, International</h1>
+        <h2>Compensation</h2>
+        <ul>
+          <li>SF/NY: Target Base Salary $200K – $275K • Offers Equity</li>
+          <li>US Nationwide (Remote): Target Base Salary $180K – $245K • Offers Equity</li>
+        </ul>
+        <h2>Overview</h2>
+        <section data-testid="job-description">Build international payment partnerships.</section>
+      </main>
+    `, "Financial Partnerships Manager, International @ Ramp | Ashby");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      salary: "$200K – $275K • $180K – $245K"
+    });
+  });
+
+  it("does not infer an Ashby salary when the compensation section is absent", async () => {
+    setPage("https://jobs.ashbyhq.com/supabase/f048dd68-63f8-4f98-9860-3d5a43c09a01", `
+      <main>
+        <h1>Product Engineer</h1>
+        <section data-testid="job-description">Receive a $1 equipment allowance after joining.</section>
+      </main>
+    `, "Product Engineer @ Supabase | Ashby");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      salary: "",
+      description: "Receive a $1 equipment allowance after joining."
+    });
+  });
+
   it("extracts a Work at a Startup job page from YC metadata", async () => {
     setPage("https://www.workatastartup.com/jobs/95982", `
       <meta name="description" content="Relationships are the single greatest predictor of long-term health and happiness.
