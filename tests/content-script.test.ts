@@ -321,40 +321,6 @@ describe("extractJob", () => {
     });
   });
 
-  it("extracts a Not Yet Unicorns page from embedded structured data", async () => {
-    setPage("https://notyetunicorns.com/job/789", `
-      <script id="__NEXT_DATA__" type="application/json">
-        {
-          "props": {
-            "pageProps": {
-              "jobData": {
-                "job": {
-                  "role_title": "Platform Engineer",
-                  "company_name": "Scaleup Ltd",
-                  "salary_range": "£80k - £100k",
-                  "description": "Own deployment pipelines and internal platform reliability."
-                },
-                "company": {
-                  "name": "Scaleup Ltd",
-                  "website_url": "https://scaleup.example"
-                }
-              }
-            }
-          }
-        }
-      </script>
-    `, "Platform Engineer at Scaleup Ltd | Not Yet Unicorns");
-
-    await expect(extractJob()).resolves.toMatchObject({
-      source: "notYetUnicorns",
-      title: "Platform Engineer",
-      company: "Scaleup Ltd",
-      website: "https://scaleup.example",
-      salary: "£80k - £100k",
-      description: "Own deployment pipelines and internal platform reliability."
-    });
-  });
-
   it("extracts a Not Yet Unicorns page from JSON-LD when Next data is absent", async () => {
     setPage("https://notyetunicorns.com/job/790", `
       <script type="application/ld+json">
@@ -384,6 +350,45 @@ describe("extractJob", () => {
       website: "https://schema.example",
       salary: "€70k-€90k",
       description: "Model data pipelines for early-stage product teams."
+    });
+  });
+
+  it("extracts a Not Yet Unicorns page from its current role payload and JSON-LD graph", async () => {
+    setPage("https://notyetunicorns.com/job/genie-ai-senior-agentic-engineer", `
+      <script id="__NEXT_DATA__" type="application/json">
+        {
+          "props": {
+            "pageProps": {
+              "role": {
+                "title": "Senior Agentic Engineer",
+                "descriptionHtml": "<p>Build agentic workflows for legal teams.</p><p>Own systems from design through production.</p>",
+                "salaryCurrency": "GBP",
+                "salaryMin": 90000,
+                "salaryMax": 120000
+              },
+              "company": { "name": "Genie AI", "website": "https://www.genieai.co/" }
+            }
+          }
+        }
+      </script>
+      <script type="application/ld+json">
+        {"@context":"https://schema.org","@graph":[{
+          "@type":"JobPosting",
+          "title":"Senior Agentic Engineer",
+          "description":"<p>Build agentic workflows for legal teams.</p>",
+          "hiringOrganization":{"name":"Genie AI","sameAs":"https://www.genieai.co/"}
+        }]}
+      </script>
+      <main><h1>Senior Agentic Engineer</h1></main>
+    `, "Senior Agentic Engineer at Genie AI | Not Yet Unicorns");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "notYetUnicorns",
+      title: "Senior Agentic Engineer",
+      company: "Genie AI",
+      website: "https://www.genieai.co/",
+      salary: "£90k-£120k",
+      description: "Build agentic workflows for legal teams.Own systems from design through production."
     });
   });
 

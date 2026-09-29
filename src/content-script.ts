@@ -672,8 +672,8 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     const schema = getNotYetUnicornsJobPostingSchema();
 
     return cleanText(
-      nextData?.job?.description ||
-      schema?.description ||
+      htmlToText(nextData?.job?.description || "") ||
+      htmlToText(schema?.description || "") ||
       textFromFirst([
         "[class*='JobDescription'][class*='content']",
         "section[class*='JobDescription']"
@@ -1259,7 +1259,25 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
   function getNotYetUnicornsNextData() {
     const root = parseJsonScript("#__NEXT_DATA__");
-    return root?.props?.pageProps?.jobData || null;
+    const pageProps = root?.props?.pageProps;
+    const role = pageProps?.role;
+    const company = pageProps?.company;
+    if (!role) {
+      return null;
+    }
+
+    return {
+      job: {
+        role_title: role.title,
+        company_name: company?.name,
+        salary_range: role.salaryInline || formatNotYetUnicornsRoleSalary(role),
+        description: role.descriptionHtml || role.description
+      },
+      company: {
+        name: company?.name,
+        website_url: company?.website || company?.websiteUrl || company?.url
+      }
+    };
   }
 
   function getNotYetUnicornsJobPostingSchema() {
@@ -1268,8 +1286,40 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       .filter(Boolean);
 
     return schemas
-      .flatMap((schema) => Array.isArray(schema) ? schema : [schema])
+      .flatMap(flattenJsonLdNodes)
       .find((schema) => schema?.["@type"] === "JobPosting") || null;
+  }
+
+  function flattenJsonLdNodes(schema) {
+    if (Array.isArray(schema)) {
+      return schema.flatMap(flattenJsonLdNodes);
+    }
+
+    if (Array.isArray(schema?.["@graph"])) {
+      return schema["@graph"].flatMap(flattenJsonLdNodes);
+    }
+
+    return schema ? [schema] : [];
+  }
+
+  function formatNotYetUnicornsRoleSalary(role) {
+    if (role?.salaryMin != null && role?.salaryMax != null) {
+      const symbol = salaryCurrencySymbol(role.salaryCurrency);
+      return `${symbol}${formatCompactSalaryNumber(role.salaryMin)}-${symbol}${formatCompactSalaryNumber(role.salaryMax)}`;
+    }
+
+    return "";
+  }
+
+  function htmlToText(value) {
+    const html = String(value || "");
+    if (!html) {
+      return "";
+    }
+
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    return cleanText(container.innerText || container.textContent || "");
   }
 
   function parseJsonScript(selector) {
