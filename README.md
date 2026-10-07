@@ -14,6 +14,7 @@ Initial support:
 - Not Yet Unicorns
 - Ashby
 - Y Combinator / Work at a Startup
+- JSGuruJobs
 
 ## Markdown Format
 
