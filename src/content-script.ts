@@ -70,6 +70,17 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
         salary: getYCombinatorSalary,
         description: getYCombinatorJobDescription
       }
+    },
+    {
+      source: "jsguruJobs",
+      urlPattern: /^https:\/\/jsgurujobs\.com\/jobs\/[^/?#]+\/?(?:[?#].*)?$/i,
+      fields: {
+        title: getJSGuruJobsTitle,
+        company: getJSGuruJobsCompanyName,
+        website: getJSGuruJobsCompanyWebsite,
+        salary: getJSGuruJobsSalary,
+        description: getJSGuruJobsDescription
+      }
     }
   ];
 
@@ -187,7 +198,8 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       linkedIn: "LinkedIn",
       notYetUnicorns: "Not Yet Unicorns",
       yCombinator: "Y Combinator",
-      wellfound: "Wellfound"
+      wellfound: "Wellfound",
+      jsguruJobs: "JSGuruJobs"
     };
 
     return labels[source] || "Job";
@@ -801,6 +813,43 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     );
   }
 
+  function getJSGuruJobsTitle() {
+    return textFromFirst(["main h1", "h1"]) || parseJSGuruJobsTitleFromDocument();
+  }
+
+  function getJSGuruJobsCompanyName() {
+    const title = firstVisibleElement(["main h1", "h1"]);
+    const nearbyCompany = title?.parentElement?.querySelector<HTMLElement>("p");
+
+    return cleanText(nearbyCompany?.innerText || nearbyCompany?.textContent || "") || parseJSGuruJobsCompanyFromDocument();
+  }
+
+  function getJSGuruJobsCompanyWebsite() {
+    return hrefFromFirst(
+      ["main a[href^='http']"],
+      (href) => isExternalWebsiteHref(href) && !/t\.me|linkedin\.com|x\.com/i.test(href)
+    ) || "";
+  }
+
+  function getJSGuruJobsSalary() {
+    return normalizeSalary(textFromJSGuruJobsDefinition("Salary"));
+  }
+
+  function getJSGuruJobsDescription() {
+    const heading = findHeadingElement(/^job description$/i);
+    const descriptionRoot = heading?.parentElement?.parentElement?.querySelector<HTMLElement>("[class*='prose']");
+
+    return cleanText(descriptionRoot?.innerText || descriptionRoot?.textContent || "") ||
+      extractJSGuruJobsDescription(cleanText(document.body?.innerText || ""));
+  }
+
+  function textFromJSGuruJobsDefinition(label: string) {
+    const term = Array.from(document.querySelectorAll<HTMLElement>("main dt, main [role='term']"))
+      .find((element) => cleanText(element.innerText || element.textContent || "").toLowerCase() === label.toLowerCase());
+
+    return cleanText(term?.nextElementSibling?.textContent || "");
+  }
+
   function textFromFirst(selectors: string[]): string {
     const element = firstVisibleElement(selectors);
     return cleanText(element?.innerText || element?.textContent || "");
@@ -992,6 +1041,16 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     return cleanText(new URL(window.location.href).pathname.split("/").filter(Boolean)[1] || "");
   }
 
+  export function parseJSGuruJobsTitleFromDocument() {
+    const title = document.title.match(/^(.+?)\s+at\s+.+?(?:\s+-\s+JavaScript Jobs Hub)?$/i);
+    return cleanText(title?.[1] || document.title);
+  }
+
+  export function parseJSGuruJobsCompanyFromDocument() {
+    const title = document.title.match(/\s+at\s+(.+?)(?:\s+-\s+JavaScript Jobs Hub)?$/i);
+    return cleanText(title?.[1] || "");
+  }
+
   export function parseBigRemoteJobMetaField(label) {
     const description = cleanText(
       document.querySelector<HTMLMetaElement>("meta[property='og:description']")?.content ||
@@ -1113,6 +1172,17 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       extractTextBetween(text, /^about .+$/i, yCombinatorDescriptionEndPatterns()) ||
       ""
     );
+  }
+
+  export function extractJSGuruJobsDescription(text) {
+    return extractTextBetween(text, /^job description$/i, [
+      /^who is this job for\??$/i,
+      /^potential interview questions$/i,
+      /^job summary$/i,
+      /^required skills$/i,
+      /^login to apply$/i,
+      /^related jobs$/i
+    ]);
   }
 
   export function extractTextBetween(text, startPattern, endPatterns) {

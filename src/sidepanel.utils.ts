@@ -1,5 +1,5 @@
 export function isSupportedJobUrl(url: string | undefined): boolean {
-  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url) || isNotYetUnicornsJobUrl(url) || isAshbyJobUrl(url) || isYCombinatorJobUrl(url);
+  return isLinkedInJobsUrl(url) || isWellfoundJobsUrl(url) || isBigRemoteJobUrl(url) || isNotYetUnicornsJobUrl(url) || isAshbyJobUrl(url) || isYCombinatorJobUrl(url) || isJSGuruJobsUrl(url);
 }
 
 export type UnsupportedJobPageMessages = {
@@ -10,6 +10,7 @@ export type UnsupportedJobPageMessages = {
   notYetUnicorns: string;
   ashby: string;
   yCombinator: string;
+  jsguruJobs: string;
   generic: string;
 };
 
@@ -41,6 +42,10 @@ export function unsupportedJobPageMessage(url: string | undefined, messages: Uns
 
   if (isYCombinatorUrl(url)) {
     return messages.yCombinator;
+  }
+
+  if (isJSGuruJobsSiteUrl(url)) {
+    return messages.jsguruJobs;
   }
 
   return messages.generic;
@@ -122,6 +127,14 @@ function isYCombinatorJobUrl(url: string | undefined): boolean {
 
 function isYCombinatorUrl(url: string | undefined): boolean {
   return /^https:\/\/(?:www\.workatastartup\.com|www\.ycombinator\.com)(?:[/?#]|$)/.test(url || "");
+}
+
+function isJSGuruJobsUrl(url: string | undefined): boolean {
+  return /^https:\/\/jsgurujobs\.com\/jobs\/[^/?#]+\/?(?:[?#].*)?$/i.test(url || "");
+}
+
+function isJSGuruJobsSiteUrl(url: string | undefined): boolean {
+  return /^https:\/\/jsgurujobs\.com(?:[/?#]|$)/i.test(url || "");
 }
 
 function slugify(value: string): string {
