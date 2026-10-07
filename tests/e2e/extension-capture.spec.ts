@@ -204,6 +204,40 @@ Why Candle
       "# Role\nGrowth Lead – Creator Program & Paid Social",
       "We're looking for a Growth Lead to own Candle's creator program"
     ]
+  },
+  {
+    name: "JSGuruJobs",
+    url: "https://jsgurujobs.com/jobs/601",
+    tabUrlPattern: "https://jsgurujobs.com/jobs/*",
+    title: "Senior Full-Stack Engineer",
+    fixture: `<!doctype html>
+      <html>
+        <head><title>Senior Full-Stack Engineer at ClassDojo - JavaScript Jobs Hub</title></head>
+        <body>
+          <main>
+            <div class="job-header">
+              <h1>Senior Full-Stack Engineer</h1>
+              <p>ClassDojo</p>
+            </div>
+            <dl>
+              <dt>Location</dt><dd>Remote</dd>
+              <dt>Job Type</dt><dd>full-time</dd>
+              <dt>Salary</dt><dd>$146,000 - $215,000</dd>
+            </dl>
+            <section class="bg-white">
+              <div><h3>Job Description</h3></div>
+              <div><div class="prose"><p>Build products used by millions of students.</p></div></div>
+            </section>
+            <h2>Required Skills</h2>
+            <p>Node.js React AWS</p>
+          </main>
+        </body>
+      </html>`,
+    expectedMarkdown: [
+      "# Company\nClassDojo",
+      "# Role\nSenior Full-Stack Engineer",
+      "Build products used by millions of students."
+    ]
   }
 ];
 
@@ -393,7 +427,7 @@ test("re-translates side panel UI when the language setting changes", async () =
     await expect(panelPage.locator("#language-label")).toHaveText("Idioma");
     await expect(panelPage.locator("#markdown")).toHaveAttribute(
       "placeholder",
-      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby o Y Combinator y actualiza para generar Markdown estructurado."
+      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, Y Combinator o JSGuruJobs y actualiza para generar Markdown estructurado."
     );
   } finally {
     await context.close();

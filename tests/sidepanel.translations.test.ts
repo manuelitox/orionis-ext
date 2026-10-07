@@ -37,7 +37,7 @@ describe("SidePanelTranslations", () => {
     expect(document.querySelector(".toolbar")?.getAttribute("aria-label")).toBe("Acciones de captura");
     expect(document.querySelector("button span")?.textContent).toBe("Copiar");
     expect(document.querySelector("#markdown")?.getAttribute("placeholder")).toBe(
-      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby o Y Combinator y actualiza para generar Markdown estructurado."
+      "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, Y Combinator o JSGuruJobs y actualiza para generar Markdown estructurado."
     );
   });
 

@@ -7,6 +7,7 @@ import {
   cleanText,
   extractAshbyDescription,
   extractBigRemoteJobDescription,
+  extractJSGuruJobsDescription,
   extractNotYetUnicornsDescription,
   extractTextAfterAshbyMetadata,
   extractTextBetween,
@@ -28,6 +29,8 @@ import {
   parseBigRemoteJobCompanyFromDocument,
   parseBigRemoteJobMetaField,
   parseBigRemoteJobTitleFromDocument,
+  parseJSGuruJobsCompanyFromDocument,
+  parseJSGuruJobsTitleFromDocument,
   parseCompanyFromDocument,
   parseJsonValue,
   parseNotYetUnicornsCompanyFromDocument,
@@ -113,6 +116,10 @@ describe("content script parser helpers", () => {
 
     setDocument("https://www.ycombinator.com/companies/candle/jobs/AzINRDn-growth-lead-creator-program-paid-social", "", "Role at Company | Y Combinator");
     expect(parseYCombinatorCompanySlug()).toBe("candle");
+
+    setDocument("https://jsgurujobs.com/jobs/601", "", "Senior Full-Stack Engineer at ClassDojo - JavaScript Jobs Hub");
+    expect(parseJSGuruJobsTitleFromDocument()).toBe("Senior Full-Stack Engineer");
+    expect(parseJSGuruJobsCompanyFromDocument()).toBe("ClassDojo");
   });
 
   it("parses BigRemoteJob meta fields", () => {
@@ -146,6 +153,7 @@ describe("content script parser helpers", () => {
     expect(extractNotYetUnicornsDescription("Intro\nThe role\nBuild product.\nLocation\nRemote")).toBe("Build product.");
     expect(extractAshbyDescription("Intro\nOverview\nBuild product.\nApplication\nForm")).toBe("Build product.");
     expect(extractYCombinatorDescription("Intro\nAbout the role\nBuild product.\nFounders\nIgnore")).toBe("Build product.");
+    expect(extractJSGuruJobsDescription("Intro\nJob Description\nBuild product.\nRequired Skills\nNode.js")).toBe("Build product.");
     expect(extractTextBetween("A\nStart\nMiddle\nEnd\nZ", /^start$/i, [/^end$/i])).toBe("Middle");
     expect(extractTextBetween("A\nMiddle\nEnd", /^start$/i, [/^end$/i])).toBe("");
   });
