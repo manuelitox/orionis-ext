@@ -9,7 +9,8 @@ const unsupportedJobPageMessages = {
   notYetUnicorns: "This Not Yet Unicorns page is not a job post. Open a specific Not Yet Unicorns job detail page before capturing.",
   ashby: "This Ashby page is not a valid job post. Open a specific Ashby job detail page before capturing.",
   yCombinator: "This Y Combinator page is not a job post. Open a specific Work at a Startup job detail page before capturing.",
-  generic: "Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, or Y Combinator job page before capturing."
+  jsguruJobs: "This JSGuruJobs page is not a job post. Open a specific JSGuruJobs job detail page before capturing.",
+  generic: "Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, Y Combinator, or JSGuruJobs job page before capturing."
 };
 
 describe("isSupportedJobUrl", () => {
@@ -21,6 +22,7 @@ describe("isSupportedJobUrl", () => {
     expect(isSupportedJobUrl("https://jobs.ashbyhq.com/acme/123e4567-e89b-12d3-a456-426614174000")).toBe(true);
     expect(isSupportedJobUrl("https://www.workatastartup.com/jobs/95982")).toBe(true);
     expect(isSupportedJobUrl("https://www.ycombinator.com/companies/candle/jobs/AzINRDn-growth-lead-creator-program-paid-social")).toBe(true);
+    expect(isSupportedJobUrl("https://jsgurujobs.com/jobs/601")).toBe(true);
   });
 
   it("rejects unsupported or incomplete URLs", () => {
@@ -30,6 +32,7 @@ describe("isSupportedJobUrl", () => {
     expect(isSupportedJobUrl("https://wellfound.com/jobs?job_listing_slug=3548419-product-engineer-full-stack")).toBe(false);
     expect(isSupportedJobUrl("https://jobs.ashbyhq.com/acme/not-a-uuid")).toBe(false);
     expect(isSupportedJobUrl("https://www.workatastartup.com/jobs/not-a-number")).toBe(false);
+    expect(isSupportedJobUrl("https://jsgurujobs.com/jobs")).toBe(false);
   });
 });
 
@@ -43,10 +46,11 @@ describe("unsupportedJobPageMessage", () => {
     expect(unsupportedJobPageMessage("https://jobs.ashbyhq.com/acme/not-a-uuid", unsupportedJobPageMessages)).toBe("This Ashby page is not a valid job post. Open a specific Ashby job detail page before capturing.");
     expect(unsupportedJobPageMessage("https://www.ycombinator.com/", unsupportedJobPageMessages)).toBe("This Y Combinator page is not a job post. Open a specific Work at a Startup job detail page before capturing.");
     expect(unsupportedJobPageMessage("https://www.workatastartup.com/companies/candle", unsupportedJobPageMessages)).toBe("This Y Combinator page is not a job post. Open a specific Work at a Startup job detail page before capturing.");
+    expect(unsupportedJobPageMessage("https://jsgurujobs.com/jobs", unsupportedJobPageMessages)).toBe("This JSGuruJobs page is not a job post. Open a specific JSGuruJobs job detail page before capturing.");
   });
 
   it("falls back to generic guidance for unknown pages", () => {
-    expect(unsupportedJobPageMessage("https://example.com/jobs/123", unsupportedJobPageMessages)).toBe("Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, or Y Combinator job page before capturing.");
+    expect(unsupportedJobPageMessage("https://example.com/jobs/123", unsupportedJobPageMessages)).toBe("Open a LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, Y Combinator, or JSGuruJobs job page before capturing.");
   });
 });
 

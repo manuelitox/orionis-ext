@@ -29,7 +29,7 @@ export const es = {
   "settings.languageSpanish": "Español",
   "editor.label": "Markdown",
   "editor.hint": "Borrador editable",
-  "editor.placeholder": "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby o Y Combinator y actualiza para generar Markdown estructurado.",
+  "editor.placeholder": "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, Y Combinator o JSGuruJobs y actualiza para generar Markdown estructurado.",
   "errors.jobDataUnavailable": "Los datos de la oferta no estaban disponibles en esta página.",
   "errors.folderPermissionDenied": "No se concedió permiso de escritura para la carpeta.",
   "errors.noFilenameAvailable": "No se pudo encontrar un nombre de archivo disponible.",
@@ -46,5 +46,6 @@ export const es = {
   "errors.unsupported.notyetunicorns": "Esta página de Not Yet Unicorns no es una oferta. Abre una página de detalle de una oferta de Not Yet Unicorns antes de capturar.",
   "errors.unsupported.ashby": "Esta página de Ashby no es una oferta válida. Abre una página de detalle de una oferta de Ashby antes de capturar.",
   "errors.unsupported.ycombinator": "Esta página de Y Combinator no es una oferta. Abre una página de detalle de Work at a Startup antes de capturar.",
-  "errors.unsupported.generic": "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby o Y Combinator antes de capturar."
+  "errors.unsupported.jsgurujobs": "Esta página de JSGuruJobs no es una oferta. Abre una página de detalle de JSGuruJobs antes de capturar.",
+  "errors.unsupported.generic": "Abre una oferta de LinkedIn, Wellfound, BigRemoteJob, Not Yet Unicorns, Ashby, Y Combinator o JSGuruJobs antes de capturar."
 } satisfies Record<keyof typeof en, string>;

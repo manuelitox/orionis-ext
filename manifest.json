@@ -12,7 +12,8 @@
     "https://notyetunicorns.com/job/*",
     "https://jobs.ashbyhq.com/*/*",
     "https://www.workatastartup.com/jobs/*",
-    "https://www.ycombinator.com/companies/*/jobs/*"
+    "https://www.ycombinator.com/companies/*/jobs/*",
+    "https://jsgurujobs.com/jobs/*"
   ],
   "icons": {
     "16": "assets/icon-16.png",
@@ -42,7 +43,8 @@
         "https://notyetunicorns.com/job/*",
         "https://jobs.ashbyhq.com/*/*",
         "https://www.workatastartup.com/jobs/*",
-        "https://www.ycombinator.com/companies/*/jobs/*"
+        "https://www.ycombinator.com/companies/*/jobs/*",
+        "https://jsgurujobs.com/jobs/*"
       ],
       "js": ["src/content-script.js"]
     }

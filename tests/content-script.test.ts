@@ -503,6 +503,38 @@ Why Candle
     });
   });
 
+  it("extracts a JSGuruJobs job page", async () => {
+    setPage("https://jsgurujobs.com/jobs/601", `
+      <main>
+        <div class="job-header">
+          <h1>Senior Full-Stack Engineer</h1>
+          <p>ClassDojo</p>
+        </div>
+        <a href="https://t.me/jsgurujobs">Get hot jobs first on Telegram</a>
+        <dl>
+          <dt>Location</dt><dd>Remote</dd>
+          <dt>Job Type</dt><dd>full-time</dd>
+          <dt>Salary</dt><dd>$146,000 - $215,000</dd>
+        </dl>
+        <section class="bg-white">
+          <div><h3>Job Description</h3></div>
+          <div><div class="prose"><p>Build products used by millions of students.</p><p>Collaborate with a world-class engineering team.</p></div></div>
+        </section>
+        <h3>Required Skills</h3>
+        <p>Node.js React AWS</p>
+      </main>
+    `, "Senior Full-Stack Engineer at ClassDojo - JavaScript Jobs Hub");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "jsguruJobs",
+      title: "Senior Full-Stack Engineer",
+      company: "ClassDojo",
+      website: "",
+      salary: "$146,000 - $215,000",
+      description: expect.stringContaining("Build products used by millions of students.Collaborate with a world-class engineering team.")
+    });
+  });
+
   it("rejects unsupported pages", async () => {
     setPage("https://example.com/jobs/123", "<h1>Unsupported</h1>", "Unsupported");
 
