@@ -56,6 +56,43 @@ describe("extractJob", () => {
     });
   });
 
+  it("extracts LinkedIn job description from a JSON-LD graph with multiple types", async () => {
+    setPage("https://www.linkedin.com/jobs/view/789", `
+      <main>
+        <h1 class="jobs-unified-top-card__job-title">Platform Engineer</h1>
+        <a class="jobs-unified-top-card__company-name">Acme</a>
+        <script type="application/ld+json">{
+          "@graph": [{
+            "@type": ["Thing", "JobPosting"],
+            "description": "<p>Own platform reliability and build internal developer tooling.</p>"
+          }]
+        }</script>
+      </main>
+    `, "Platform Engineer | Acme | LinkedIn");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "linkedIn",
+      title: "Platform Engineer",
+      company: "Acme",
+      description: "Own platform reliability and build internal developer tooling."
+    });
+  });
+
+  it("extracts LinkedIn description text from serialized page state", async () => {
+    setPage("https://www.linkedin.com/jobs/view/790", `
+      <main>
+        <h1 class="jobs-unified-top-card__job-title">Backend Engineer</h1>
+        <a class="jobs-unified-top-card__company-name">Example Co</a>
+        <script>window.__JOB_STATE__ = {"jobDetails":{"descriptionText":"Build dependable APIs for product teams."}};</script>
+      </main>
+    `, "Backend Engineer | Example Co | LinkedIn");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "linkedIn",
+      description: "Build dependable APIs for product teams."
+    });
+  });
+
   it("rejects a LinkedIn jobs page when the job contract is incomplete", async () => {
     setPage("https://www.linkedin.com/jobs/search/?keywords=engineer", `
       <main>

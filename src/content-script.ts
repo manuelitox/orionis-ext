@@ -243,6 +243,10 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
   function getLinkedInJobDescription() {
     const descriptionRoot = bestTextElement([
+      "[data-testid='expandable-text-box']",
+      "[data-test-id='expandable-text-box']",
+      "[data-test-id='job-details']",
+      "[data-testid='job-details']",
       "[componentkey^='JobDetails_AboutTheJob']",
       "[componentKey^='JobDetails_AboutTheJob']",
       ".show-more-less-html__markup",
@@ -260,7 +264,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     ]);
 
     const visibleDescription = cleanText(descriptionRoot?.innerText || "");
-    return visibleDescription || getLinkedInJobPostingDescription();
+    return visibleDescription || getLinkedInJobPostingDescription() || getLinkedInDescriptionFromPageState();
   }
 
   function getLinkedInJobPostingDescription() {
@@ -268,9 +272,59 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       .map((element) => parseJsonValue(element.textContent))
       .filter(Boolean);
     const posting = schemas.flatMap(flattenJsonLdNodes)
-      .find((schema) => schema?.["@type"] === "JobPosting");
+      .find((schema) => jsonLdHasType(schema, "JobPosting"));
 
     return htmlToText(posting?.description || "");
+  }
+
+  function getLinkedInDescriptionFromPageState() {
+    const scripts = Array.from(document.querySelectorAll("script:not([src])"));
+    for (const script of scripts) {
+      const text = script.textContent || "";
+      if (!/description|jobPosting|jobDetails/i.test(text)) {
+        continue;
+      }
+
+      const value = parseEmbeddedJsonValue(text);
+      if (!value) {
+        continue;
+      }
+
+      const candidates = flattenJsonLdNodes(value).flatMap((node) => [
+        node?.description,
+        node?.descriptionText,
+        node?.jobPosting?.description,
+        node?.jobPosting?.descriptionText,
+        node?.jobDetails?.description,
+        node?.jobDetails?.descriptionText
+      ]);
+      const description = candidates.map(htmlToText).find(Boolean);
+      if (description) {
+        return description;
+      }
+    }
+
+    return "";
+  }
+
+  function jsonLdHasType(value, type: string): boolean {
+    const types = Array.isArray(value?.["@type"]) ? value["@type"] : [value?.["@type"]];
+    return types.some((candidate) => String(candidate || "").toLowerCase() === type.toLowerCase());
+  }
+
+  function parseEmbeddedJsonValue(text: string) {
+    const direct = parseJsonValue(text);
+    if (direct) {
+      return direct;
+    }
+
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start < 0 || end <= start) {
+      return null;
+    }
+
+    return parseJsonValue(text.slice(start, end + 1));
   }
 
   function getLinkedInCompanyWebsite() {
@@ -290,6 +344,10 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
 
   export async function expandLinkedInJobDescription() {
     const descriptionRoot = firstVisibleElement([
+      "[data-testid='expandable-text-box']",
+      "[data-test-id='expandable-text-box']",
+      "[data-test-id='job-details']",
+      "[data-testid='job-details']",
       "[componentkey^='JobDetails_AboutTheJob']",
       "[componentKey^='JobDetails_AboutTheJob']",
       ".show-more-less-html__markup",
