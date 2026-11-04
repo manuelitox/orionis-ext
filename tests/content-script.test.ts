@@ -36,6 +36,26 @@ describe("extractJob", () => {
     expect(job.captured_at).toEqual(expect.any(String));
   });
 
+  it("extracts LinkedIn's current description markup on regional job URLs", async () => {
+    setPage("https://es.linkedin.com/jobs/view/full-stack-ai-engineer-at-scispot-4431471163", `
+      <main>
+        <h1 class="jobs-unified-top-card__job-title">Full Stack AI Engineer</h1>
+        <a class="jobs-unified-top-card__company-name">Scispot</a>
+        <div class="show-more-less-html__markup">
+          Why Scispot. We build software that helps life science teams manage their data.
+          What You'll Do. Build product features across React, TypeScript, Java, Python, and AWS.
+        </div>
+      </main>
+    `, "Full Stack AI Engineer en Scispot | LinkedIn");
+
+    await expect(extractJob()).resolves.toMatchObject({
+      source: "linkedIn",
+      title: "Full Stack AI Engineer",
+      company: "Scispot",
+      description: expect.stringContaining("Build product features across React")
+    });
+  });
+
   it("rejects a LinkedIn jobs page when the job contract is incomplete", async () => {
     setPage("https://www.linkedin.com/jobs/search/?keywords=engineer", `
       <main>

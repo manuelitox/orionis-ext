@@ -5,7 +5,7 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
   const JOB_SOURCES: JobSource[] = [
     {
       source: "linkedIn",
-      urlPattern: /^https:\/\/www\.linkedin\.com\/jobs\//,
+      urlPattern: /^https:\/\/(?:www|[a-z]{2})\.linkedin\.com\/jobs\//i,
       beforeExtract: expandLinkedInJobDescription,
       fields: {
         title: getLinkedInJobTitle,
@@ -245,6 +245,10 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     const descriptionRoot = bestTextElement([
       "[componentkey^='JobDetails_AboutTheJob']",
       "[componentKey^='JobDetails_AboutTheJob']",
+      ".show-more-less-html__markup",
+      "[class*='show-more-less-html'] [class*='markup']",
+      "[class*='jobs-description-content__text']",
+      "[data-job-details] [class*='description']",
       "#job-details",
       ".jobs-description",
       ".jobs-description__content",
@@ -255,7 +259,18 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
       "[class*='jobs-box'] [class*='html-content']"
     ]);
 
-    return cleanText(descriptionRoot?.innerText || "");
+    const visibleDescription = cleanText(descriptionRoot?.innerText || "");
+    return visibleDescription || getLinkedInJobPostingDescription();
+  }
+
+  function getLinkedInJobPostingDescription() {
+    const schemas = Array.from(document.querySelectorAll("script[type='application/ld+json']"))
+      .map((element) => parseJsonValue(element.textContent))
+      .filter(Boolean);
+    const posting = schemas.flatMap(flattenJsonLdNodes)
+      .find((schema) => schema?.["@type"] === "JobPosting");
+
+    return htmlToText(posting?.description || "");
   }
 
   function getLinkedInCompanyWebsite() {
@@ -277,6 +292,9 @@ import type { CapturedJob, ExtractedJobFields, JobSource } from "./content-scrip
     const descriptionRoot = firstVisibleElement([
       "[componentkey^='JobDetails_AboutTheJob']",
       "[componentKey^='JobDetails_AboutTheJob']",
+      ".show-more-less-html__markup",
+      "[class*='show-more-less-html'] [class*='markup']",
+      "[class*='jobs-description-content__text']",
       ".jobs-description",
       ".jobs-description__content",
       "#job-details"

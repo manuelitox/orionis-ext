@@ -15,30 +15,27 @@ type CaptureCase = {
 const captureCases: CaptureCase[] = [
   {
     name: "LinkedIn",
-    url: "https://www.linkedin.com/jobs/view/123",
-    tabUrlPattern: "https://www.linkedin.com/jobs/*",
-    title: "Frontend Engineer",
+    url: "https://es.linkedin.com/jobs/view/full-stack-ai-engineer-at-scispot-4431471163",
+    tabUrlPattern: "https://*.linkedin.com/jobs/*",
+    title: "Full Stack AI Engineer",
     fixture: `<!doctype html>
       <html>
-        <head><title>Frontend Engineer | Acme | LinkedIn</title></head>
+        <head><title>Full Stack AI Engineer en Scispot | LinkedIn</title></head>
         <body>
           <main>
-            <h1 class="jobs-unified-top-card__job-title">Frontend Engineer</h1>
-            <a class="jobs-unified-top-card__company-name">Acme</a>
-            <a href="https://acme.example">Company website</a>
-            <section class="jobs-description">
-              About the job
-              Build accessible product workflows.
-              Requirements include TypeScript and browser extension experience.
-            </section>
-            <p>$120k - $150k</p>
+            <h1 class="jobs-unified-top-card__job-title">Full Stack AI Engineer</h1>
+            <a class="jobs-unified-top-card__company-name">Scispot</a>
+            <div class="show-more-less-html__markup">
+              Why Scispot. We build software that helps life science teams manage their data.
+              What You'll Do. Build product features across React, TypeScript, Java, Python, and AWS.
+            </div>
           </main>
         </body>
       </html>`,
     expectedMarkdown: [
-      "# Company\nAcme",
-      "# Role\nFrontend Engineer",
-      "Build accessible product workflows."
+      "# Company\nScispot",
+      "# Role\nFull Stack AI Engineer",
+      "Build product features across React, TypeScript, Java, Python, and AWS."
     ]
   },
   {
@@ -331,7 +328,7 @@ test("confirms before replacing an edited draft after a supported capture succee
     await panelPage.locator("#refresh").click();
 
     await expect(panelPage.locator("#status")).toHaveText("Markdown ready. Review, copy, or save it.");
-    await expect(panelPage.locator("#markdown")).toHaveValue(/# Role\nFrontend Engineer/);
+    await expect(panelPage.locator("#markdown")).toHaveValue(/# Role\nFull Stack AI Engineer/);
   } finally {
     await context.close();
   }

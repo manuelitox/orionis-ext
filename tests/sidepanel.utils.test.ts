@@ -16,6 +16,7 @@ const unsupportedJobPageMessages = {
 describe("isSupportedJobUrl", () => {
   it("accepts supported job page URLs", () => {
     expect(isSupportedJobUrl("https://www.linkedin.com/jobs/view/123")).toBe(true);
+    expect(isSupportedJobUrl("https://es.linkedin.com/jobs/view/full-stack-ai-engineer-at-scispot-4431471163")).toBe(true);
     expect(isSupportedJobUrl("https://wellfound.com/jobs/123")).toBe(true);
     expect(isSupportedJobUrl("https://bigremotejob.com/remote-jobs/frontend-engineer")).toBe(true);
     expect(isSupportedJobUrl("https://notyetunicorns.com/job/platform-engineer")).toBe(true);

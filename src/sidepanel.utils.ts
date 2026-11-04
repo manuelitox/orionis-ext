@@ -67,11 +67,11 @@ export function extractMarkdownSection(markdown: string, heading: string): strin
 }
 
 function isLinkedInJobsUrl(url: string | undefined): boolean {
-  return /^https:\/\/www\.linkedin\.com\/jobs\//.test(url || "");
+  return /^https:\/\/(?:www|[a-z]{2})\.linkedin\.com\/jobs\//i.test(url || "");
 }
 
 function isLinkedInUrl(url: string | undefined): boolean {
-  return /^https:\/\/www\.linkedin\.com\//.test(url || "");
+  return /^https:\/\/(?:www|[a-z]{2})\.linkedin\.com\//i.test(url || "");
 }
 
 function isWellfoundJobsUrl(url: string | undefined): boolean {
